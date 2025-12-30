@@ -1,0 +1,81 @@
+{
+  "name": "LocalLink",
+  "displayName": "LocalLink",
+  "expo": {
+    "name": "LocalLink",
+    "slug": "locallink",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#E07A5F"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.locallink.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "LocalLink needs your location to show nearby experiences and enable GPS tracking during tours.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "LocalLink needs your location for live GPS tracking during experiences for your safety.",
+        "NSCameraUsageDescription": "LocalLink needs camera access to take photos during your experiences.",
+        "NSPhotoLibraryUsageDescription": "LocalLink needs photo library access to upload photos for reviews and profile.",
+        "NSMicrophoneUsageDescription": "LocalLink needs microphone access for voice calls with guides."
+      },
+      "config": {
+        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#E07A5F"
+      },
+      "package": "com.locallink.app",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECORD_AUDIO",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+        }
+      }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow LocalLink to use your location for GPS tracking during experiences."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow LocalLink to access your photos for profile and reviews.",
+          "cameraPermission": "Allow LocalLink to take photos during experiences."
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    }
+  }
+}

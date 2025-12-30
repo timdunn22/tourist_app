@@ -1,0 +1,65 @@
+2025-12-24 17:23:04 [info]: 🚀 Server running on port 3000
+2025-12-24 17:23:04 [info]: 📝 API docs available at http://localhost:3000/api/docs
+2025-12-24 17:24:53 [info]: ::1 - - [25/Dec/2025:00:24:53 +0000] "GET / HTTP/1.1" 404 21 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-24 17:25:55 [info]: ::ffff:127.0.0.1 - - [25/Dec/2025:00:25:55 +0000] "GET /api/health HTTP/1.1" 404 21 "-" "curl/7.84.0"
+2025-12-24 17:32:27 [error]: SyntaxError: Unexpected token ! in JSON at position 57
+    at JSON.parse (<anonymous>)
+    at parse (/Users/timdunn/tourist_app/backend/node_modules/body-parser/lib/types/json.js:92:19)
+    at /Users/timdunn/tourist_app/backend/node_modules/body-parser/lib/read.js:128:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:199:9)
+    at invokeCallback (/Users/timdunn/tourist_app/backend/node_modules/raw-body/index.js:238:16)
+    at done (/Users/timdunn/tourist_app/backend/node_modules/raw-body/index.js:227:7)
+    at IncomingMessage.onEnd (/Users/timdunn/tourist_app/backend/node_modules/raw-body/index.js:287:7)
+    at IncomingMessage.emit (node:events:402:35)
+    at endReadableNT (node:internal/streams/readable:1343:12)
+    at processTicksAndRejections (node:internal/process/task_queues:83:21)
+2025-12-24 17:32:33 [info]: ::ffff:127.0.0.1 - - [25/Dec/2025:00:32:33 +0000] "POST /api/auth/login HTTP/1.1" 401 31 "-" "curl/7.84.0"
+2025-12-24 17:34:11 [info]: User logged in: cmjkp88cg0000fbu9baicsczz
+2025-12-24 17:34:11 [info]: ::1 - - [25/Dec/2025:00:34:11 +0000] "POST /api/auth/login HTTP/1.1" 200 859 "http://localhost:3001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+2025-12-24 17:46:51 [info]: 🚀 Server running on port 3000
+2025-12-24 17:46:51 [info]: 📝 API docs available at http://localhost:3000/api/docs
+2025-12-24 17:46:56 [info]: 🚀 Server running on port 3000
+2025-12-24 17:46:56 [info]: 📝 API docs available at http://localhost:3000/api/docs
+2025-12-24 17:47:01 [info]: 🚀 Server running on port 3000
+2025-12-24 17:47:01 [info]: 📝 API docs available at http://localhost:3000/api/docs
+2025-12-24 17:47:06 [info]: 🚀 Server running on port 3000
+2025-12-24 17:47:06 [info]: 📝 API docs available at http://localhost:3000/api/docs
+2025-12-24 17:52:21 [info]: 🚀 Server running on port 3000
+2025-12-24 17:52:21 [info]: 📝 API docs available at http://localhost:3000/api/docs
+2025-12-24 18:11:28 [info]: 🚀 Server running on port 4000
+2025-12-24 18:11:28 [info]: 📝 API docs available at http://localhost:4000/api/docs
+2025-12-24 18:11:33 [info]: ::ffff:127.0.0.1 - - [25/Dec/2025:01:11:33 +0000] "GET /health HTTP/1.1" 200 54 "-" "curl/7.84.0"
+2025-12-24 18:11:37 [info]: User logged in: cmjkp88v9001dfbu93oeqgmvo
+2025-12-24 18:11:37 [info]: ::ffff:127.0.0.1 - - [25/Dec/2025:01:11:37 +0000] "POST /api/auth/login HTTP/1.1" 200 917 "-" "curl/7.84.0"
+2025-12-24 18:11:40 [info]: ::ffff:127.0.0.1 - - [25/Dec/2025:01:11:40 +0000] "POST /api/oauth/google HTTP/1.1" 400 37 "-" "curl/7.84.0"
+2025-12-24 18:37:39 [error]: SyntaxError: Unexpected token ! in JSON at position 57
+    at JSON.parse (<anonymous>)
+    at parse (/Users/timdunn/tourist_app/backend/node_modules/body-parser/lib/types/json.js:92:19)
+    at /Users/timdunn/tourist_app/backend/node_modules/body-parser/lib/read.js:128:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:199:9)
+    at invokeCallback (/Users/timdunn/tourist_app/backend/node_modules/raw-body/index.js:238:16)
+    at done (/Users/timdunn/tourist_app/backend/node_modules/raw-body/index.js:227:7)
+    at IncomingMessage.onEnd (/Users/timdunn/tourist_app/backend/node_modules/raw-body/index.js:287:7)
+    at IncomingMessage.emit (node:events:402:35)
+    at endReadableNT (node:internal/streams/readable:1343:12)
+    at processTicksAndRejections (node:internal/process/task_queues:83:21)
+2025-12-24 18:38:17 [info]: 🚀 Server running on port 4000
+2025-12-24 18:38:17 [info]: 📝 API docs available at http://localhost:4000/api/docs
+2025-12-24 18:38:24 [info]: ::ffff:127.0.0.1 - - [25/Dec/2025:01:38:24 +0000] "GET /health HTTP/1.1" 200 54 "-" "curl/7.84.0"
+2025-12-24 18:38:56 [error]: SyntaxError: Unexpected token ! in JSON at position 57
+    at JSON.parse (<anonymous>)
+    at parse (/Users/timdunn/tourist_app/backend/node_modules/body-parser/lib/types/json.js:92:19)
+    at /Users/timdunn/tourist_app/backend/node_modules/body-parser/lib/read.js:128:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:199:9)
+    at invokeCallback (/Users/timdunn/tourist_app/backend/node_modules/raw-body/index.js:238:16)
+    at done (/Users/timdunn/tourist_app/backend/node_modules/raw-body/index.js:227:7)
+    at IncomingMessage.onEnd (/Users/timdunn/tourist_app/backend/node_modules/raw-body/index.js:287:7)
+    at IncomingMessage.emit (node:events:402:35)
+    at endReadableNT (node:internal/streams/readable:1343:12)
+    at processTicksAndRejections (node:internal/process/task_queues:83:21)
+2025-12-24 18:39:04 [info]: User logged in: cmjkp88cg0000fbu9baicsczz
+2025-12-24 18:39:04 [info]: ::ffff:127.0.0.1 - - [25/Dec/2025:01:39:04 +0000] "POST /api/auth/login HTTP/1.1" 200 915 "-" "curl/7.84.0"
+2025-12-24 18:39:29 [info]: User logged in: cmjkp88cg0000fbu9baicsczz
+2025-12-24 18:39:29 [info]: ::1 - - [25/Dec/2025:01:39:29 +0000] "POST /api/auth/login HTTP/1.1" 200 915 "http://localhost:3001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.0.0 Safari/537.36"
+2025-12-24 18:42:39 [info]: User logged in: cmjkp88cg0000fbu9baicsczz
+2025-12-24 18:42:39 [info]: ::1 - - [25/Dec/2025:01:42:39 +0000] "POST /api/auth/login HTTP/1.1" 200 915 "http://localhost:3001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.0.0 Safari/537.36"

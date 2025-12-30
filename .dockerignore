@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# Node modules (will be installed in container)
+node_modules
+*/node_modules
+
+# Build outputs
+dist
+build
+.next
+
+# Development files
+*.log
+*.md
+!README.md
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+coverage
+.nyc_output
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.docker
+
+# Screenshots and docs
+app_screenshots
+docs
+
+# Mobile app (React Native - separate build)
+mobile
