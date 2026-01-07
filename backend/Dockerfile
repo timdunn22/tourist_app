@@ -1,10 +1,11 @@
 # Backend API Dockerfile
-FROM node:20-slim
+FROM node:20-bullseye
 
 WORKDIR /app
 
-# Install OpenSSL 3.x for Prisma
-RUN apt-get update -y && apt-get install -y openssl libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
+# Set Prisma to use native binary target
+ENV PRISMA_CLI_QUERY_ENGINE_TYPE="binary"
+ENV PRISMA_CLIENT_ENGINE_TYPE="binary"
 
 # Install dependencies (including devDependencies for build)
 COPY package*.json ./
