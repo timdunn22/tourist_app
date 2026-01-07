@@ -1,11 +1,14 @@
 # Backend API Dockerfile
-FROM node:18-alpine
+FROM node:18-bookworm-slim
 
 WORKDIR /app
 
+# Install OpenSSL for Prisma
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy prisma schema and generate client
 COPY prisma ./prisma/
@@ -17,9 +20,5 @@ COPY src ./src/
 # Expose port
 EXPOSE 4000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:4000/api/health || exit 1
-
-# Start the server
-CMD ["node", "src/index.js"]
+# Start the server - run migrations then start
+CMD npx prisma db push --accept-data-loss && node src/index.js
