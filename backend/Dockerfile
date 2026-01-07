@@ -1,10 +1,10 @@
 # Backend API Dockerfile
-FROM node:18-bookworm-slim
+FROM node:20-slim
 
 WORKDIR /app
 
-# Install OpenSSL for Prisma
-RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+# Install OpenSSL 3.x for Prisma
+RUN apt-get update -y && apt-get install -y openssl libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies (including devDependencies for build)
 COPY package*.json ./
