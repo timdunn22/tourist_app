@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { body, query } from 'express-validator';
 import { validateRequest } from '../middleware/validateRequest';
 import { authMiddleware } from '../middleware/auth';
@@ -21,7 +21,7 @@ router.post(
     body('bookingId').optional().isString(),
   ],
   validateRequest,
-  async (req, res, next) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { latitude, longitude, type, message, bookingId, accuracy } = req.body;
       const userId = (req as any).user.id;
@@ -91,7 +91,7 @@ router.put(
   authMiddleware,
   [body('resolution').isString()],
   validateRequest,
-  async (req, res, next) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { resolution } = req.body;
       const userId = (req as any).user.id;
@@ -157,7 +157,7 @@ router.post(
     body('longitude').isFloat({ min: -180, max: 180 }),
   ],
   validateRequest,
-  async (req, res, next) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { latitude, longitude } = req.body;
 
@@ -225,7 +225,7 @@ router.post(
     body('longitude').optional().isFloat(),
   ],
   validateRequest,
-  async (req, res, next) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = (req as any).user.id;
       const {
@@ -300,7 +300,7 @@ router.post(
     body('bookingId').optional().isString(),
   ],
   validateRequest,
-  async (req, res, next) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = (req as any).user.id;
       const { latitude, longitude, type, note, bookingId, expectedNextCheckIn, alertIfMissed } =
@@ -376,7 +376,7 @@ router.post(
     body('relationship').trim().notEmpty(),
   ],
   validateRequest,
-  async (req, res, next) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = (req as any).user.id;
       const { name, phone, email, relationship, notifyOnPanic, notifyOnCheckIn } = req.body;
@@ -410,7 +410,7 @@ router.put(
     body('email').optional().isEmail(),
   ],
   validateRequest,
-  async (req, res, next) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = (req as any).user.id;
 

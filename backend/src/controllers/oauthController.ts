@@ -135,7 +135,12 @@ export const facebookAuth = async (req: Request, res: Response, next: NextFuncti
       return res.status(400).json({ error: 'Invalid Facebook token' });
     }
 
-    const fbData = await response.json();
+    const fbData = await response.json() as {
+      id: string;
+      email?: string;
+      name: string;
+      picture?: { data?: { url?: string } };
+    };
 
     if (!fbData.email) {
       return res.status(400).json({ error: 'Email permission required' });
