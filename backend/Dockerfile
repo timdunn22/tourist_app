@@ -1,4 +1,4 @@
-# Backend API Dockerfile
+# Backend API Dockerfile v2
 FROM node:20-bullseye
 
 WORKDIR /app
