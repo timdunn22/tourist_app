@@ -20,5 +20,5 @@ COPY src ./src/
 # Expose port
 EXPOSE 4000
 
-# Start the server - run migrations then start
-CMD npx prisma db push --accept-data-loss && node src/index.js
+# Start the server
+CMD ["node", "src/index.js"]
