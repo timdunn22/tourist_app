@@ -6,7 +6,7 @@ WORKDIR /app
 # Install OpenSSL for Prisma
 RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
+# Install dependencies (including devDependencies for build)
 COPY package*.json ./
 RUN npm ci
 
@@ -14,11 +14,15 @@ RUN npm ci
 COPY prisma ./prisma/
 RUN npx prisma generate
 
-# Copy source code
+# Copy TypeScript config and source code
+COPY tsconfig.json ./
 COPY src ./src/
+
+# Build TypeScript
+RUN npm run build
 
 # Expose port
 EXPOSE 4000
 
-# Start the server
-CMD ["node", "src/index.js"]
+# Start the server from compiled JS
+CMD ["node", "dist/index.js"]
