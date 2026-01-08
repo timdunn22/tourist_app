@@ -28,14 +28,8 @@ export default defineConfig({
     },
     // Optimize chunk size
     chunkSizeWarningLimit: 500,
-    // Enable minification
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
+    // Enable minification with esbuild (default, fast)
+    minify: 'esbuild',
     // Generate source maps for production debugging
     sourcemap: false,
     // CSS code splitting
