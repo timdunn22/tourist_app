@@ -10,6 +10,8 @@ function MainLayout() {
   const navItems = [
     { path: '/', label: 'Home', icon: '🏠' },
     { path: '/explore', label: 'Explore', icon: '🗺️' },
+    { path: '/nearby', label: 'Travelers', icon: '👥', badge: 'New' },
+    { path: '/trips', label: 'Trips', icon: '✈️', badge: 'New' },
     { path: '/bookings', label: 'Bookings', icon: '📅', auth: true },
     { path: '/messages', label: 'Messages', icon: '💬', auth: true },
     { path: '/favorites', label: 'Favorites', icon: '❤️', auth: true },
@@ -41,7 +43,7 @@ function MainLayout() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    className={`relative px-4 py-2 rounded-lg font-medium transition-colors ${
                       isActive
                         ? 'bg-primary-50 text-primary-600'
                         : 'text-gray-600 hover:bg-gray-100'
@@ -49,6 +51,11 @@ function MainLayout() {
                   >
                     <span className="mr-2">{item.icon}</span>
                     {item.label}
+                    {item.badge && (
+                      <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-accent-400 text-white text-[10px] font-bold rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
