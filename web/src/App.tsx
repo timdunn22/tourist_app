@@ -222,7 +222,7 @@ const LoginPage = () => {
         <div className="text-center mb-8">
           <div className="text-6xl mb-4">🌏</div>
           <h1 className="text-3xl font-bold text-white">LocalLink</h1>
-          <p className="text-orange-100 mt-2">Connect with local guides</p>
+          <p className="text-white mt-2">Travel human. Travel safe.</p>
         </div>
 
         {/* Login Card */}
@@ -366,7 +366,7 @@ const SignupPage = () => {
         <div className="text-center mb-8">
           <div className="text-6xl mb-4">🌏</div>
           <h1 className="text-3xl font-bold text-white">LocalLink</h1>
-          <p className="text-orange-100 mt-2">Join our community</p>
+          <p className="text-white mt-2">Join our community</p>
         </div>
 
         {/* Signup Card */}
@@ -444,7 +444,7 @@ const HomePage = () => {
       <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-6 rounded-b-3xl">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <p className="text-orange-100 text-sm">Welcome back</p>
+            <p className="text-white/90 text-sm">Welcome back</p>
             <h1 className="text-2xl font-bold">{user?.name || 'Traveler'}</h1>
           </div>
           <div className="flex gap-2">
@@ -1008,7 +1008,7 @@ const ProfilePage = () => {
           </div>
           <div>
             <h1 className="text-xl font-bold">{user?.name}</h1>
-            <p className="text-orange-100">{user?.email}</p>
+            <p className="text-white/90">{user?.email}</p>
           </div>
         </div>
       </div>

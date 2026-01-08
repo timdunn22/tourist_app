@@ -257,24 +257,30 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
           )}
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label htmlFor="admin-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
+              id="admin-email"
+              name="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               required
+              autoComplete="email"
             />
           </div>
-          
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label htmlFor="admin-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input
+              id="admin-password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               required
+              autoComplete="current-password"
             />
           </div>
           

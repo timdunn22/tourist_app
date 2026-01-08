@@ -80,7 +80,7 @@ function ExplorePage() {
   }, [viewMode, filteredExperiences]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -140,14 +140,14 @@ function ExplorePage() {
             </div>
           </>
         ) : (
-          <div className="flex gap-6 h-[calc(100vh-200px)]">
+          <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[calc(100vh-200px)]">
             {/* Map */}
-            <div className="flex-1 rounded-2xl overflow-hidden shadow-lg">
+            <div className="flex-1 rounded-2xl overflow-hidden shadow-lg min-h-[400px] lg:min-h-0">
               <div ref={mapRef} className="w-full h-full" />
             </div>
 
             {/* Sidebar */}
-            <div className="w-80 flex-shrink-0 overflow-y-auto">
+            <div className="w-full lg:w-80 flex-shrink-0 overflow-y-auto max-h-[50vh] lg:max-h-none">
               <h3 className="font-semibold text-gray-800 mb-4">
                 {filteredExperiences.length} experiences
               </h3>

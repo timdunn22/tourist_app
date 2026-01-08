@@ -41,7 +41,7 @@ function HomePage() {
             <h1 className="font-display text-5xl md:text-6xl font-bold mb-6">
               Discover Authentic Local Experiences
             </h1>
-            <p className="text-xl text-white/90 mb-8">
+            <p className="text-xl text-white mb-8">
               Connect with verified local guides in Kathmandu for unforgettable adventures.
               Travel human. Travel safe.
             </p>
@@ -156,7 +156,7 @@ function HomePage() {
           <h2 className="font-display text-4xl font-bold mb-6">
             Become a Local Guide
           </h2>
-          <p className="text-xl text-secondary-200 mb-8">
+          <p className="text-xl text-white/95 mb-8">
             Share your knowledge, earn income, and connect with travelers from around the world.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
