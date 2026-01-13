@@ -1148,3 +1148,505 @@ const logAudit = async (req: Request, action: string, entity: string, entityId: 
     logger.error('Failed to create audit log:', error);
   }
 };
+
+// ==================== VERIFICATION DOCUMENTS ====================
+
+export const getVerificationDocuments = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { status = 'PENDING', page = '1', limit = '20' } = req.query;
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+    const [documents, total] = await Promise.all([
+      prisma.verificationDocument.findMany({
+        where: { status: status as any },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+              verificationLevel: true,
+              createdAt: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+        skip,
+        take: parseInt(limit as string),
+      }),
+      prisma.verificationDocument.count({ where: { status: status as any } }),
+    ]);
+
+    res.json({
+      documents,
+      total,
+      page: parseInt(page as string),
+      totalPages: Math.ceil(total / parseInt(limit as string)),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getVerificationStats = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [pending, approved, rejected, total] = await Promise.all([
+      prisma.verificationDocument.count({ where: { status: 'PENDING' } }),
+      prisma.verificationDocument.count({ where: { status: 'APPROVED' } }),
+      prisma.verificationDocument.count({ where: { status: 'REJECTED' } }),
+      prisma.verificationDocument.count(),
+    ]);
+
+    const byType = await prisma.verificationDocument.groupBy({
+      by: ['type'],
+      _count: true,
+    });
+
+    res.json({
+      pending,
+      approved,
+      rejected,
+      total,
+      byType,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getVerificationDocument = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const document = await prisma.verificationDocument.findUnique({
+      where: { id: req.params.id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            verificationLevel: true,
+            dateOfBirth: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    // Fetch reviewer separately if exists
+    let reviewer = null;
+    if (document.reviewedBy) {
+      reviewer = await prisma.user.findUnique({
+        where: { id: document.reviewedBy },
+        select: { id: true, name: true },
+      });
+    }
+
+    res.json({ ...document, reviewer });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const reviewVerificationDocument = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { status, rejectionReason, adminNotes } = req.body;
+    const adminId = (req as any).user?.id;
+
+    if (!['APPROVED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const document = await prisma.verificationDocument.update({
+      where: { id: req.params.id },
+      data: {
+        status,
+        rejectionReason: status === 'REJECTED' ? rejectionReason : null,
+        reviewedBy: adminId,
+        reviewedAt: new Date(),
+        adminNotes,
+      },
+      include: { user: true },
+    });
+
+    // Update user verification level if approved
+    if (status === 'APPROVED') {
+      await prisma.user.update({
+        where: { id: document.userId },
+        data: {
+          verificationLevel: 'ID_VERIFIED',
+          verifiedAt: new Date(),
+        },
+      });
+    }
+
+    await logAudit(req, 'REVIEW', 'VerificationDocument', document.id, { status, rejectionReason });
+
+    res.json(document);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==================== CHAT MODERATION ====================
+
+export const getMessageReports = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { status = 'PENDING', page = '1', limit = '20' } = req.query;
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+    const [reports, total] = await Promise.all([
+      prisma.messageReport.findMany({
+        where: { status: status as any },
+        include: {
+          reporter: {
+            select: { id: true, name: true, avatar: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit as string),
+      }),
+      prisma.messageReport.count({ where: { status: status as any } }),
+    ]);
+
+    // Fetch messages for each report
+    const reportsWithMessages = await Promise.all(
+      reports.map(async (report) => {
+        let message = null;
+        if (report.messageId) {
+          message = await prisma.message.findUnique({
+            where: { id: report.messageId },
+            include: {
+              sender: { select: { id: true, name: true, avatar: true } },
+              conversation: { select: { id: true, type: true, roomName: true } },
+            },
+          });
+        }
+        return { ...report, message };
+      })
+    );
+
+    res.json({
+      reports: reportsWithMessages,
+      total,
+      page: parseInt(page as string),
+      totalPages: Math.ceil(total / parseInt(limit as string)),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMessageReport = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const report = await prisma.messageReport.findUnique({
+      where: { id: req.params.id },
+      include: {
+        reporter: {
+          select: { id: true, name: true, avatar: true },
+        },
+      },
+    });
+
+    if (!report) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    // Fetch message separately
+    let message = null;
+    if (report.messageId) {
+      message = await prisma.message.findUnique({
+        where: { id: report.messageId },
+        include: {
+          sender: { select: { id: true, name: true, avatar: true, email: true } },
+          conversation: true,
+        },
+      });
+    }
+
+    // Fetch reviewer separately
+    let reviewer = null;
+    if (report.reviewedBy) {
+      reviewer = await prisma.user.findUnique({
+        where: { id: report.reviewedBy },
+        select: { id: true, name: true },
+      });
+    }
+
+    res.json({ ...report, message, reviewer });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const moderateMessage = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { action } = req.body;
+    const adminId = (req as any).user?.id;
+
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    // Update message based on action - just delete for now since no isHidden field
+    if (action === 'HIDE' || action === 'DELETE') {
+      await prisma.message.delete({ where: { id: req.params.id } });
+    }
+
+    // Update any related reports
+    await prisma.messageReport.updateMany({
+      where: { messageId: req.params.id },
+      data: {
+        status: 'ACTIONED',
+        reviewedBy: adminId,
+        reviewedAt: new Date(),
+        action,
+      },
+    });
+
+    await logAudit(req, 'MODERATE', 'Message', req.params.id, { action });
+
+    res.json({ message: 'Message moderated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getConversationMessages = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { page = '1', limit = '50' } = req.query;
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+    const messages = await prisma.message.findMany({
+      where: { conversationId: req.params.id },
+      include: {
+        sender: {
+          select: { id: true, name: true, avatar: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: parseInt(limit as string),
+    });
+
+    res.json(messages);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==================== SUBSCRIPTION ANALYTICS ====================
+
+export const getSubscriptionAnalytics = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { period = '30d' } = req.query;
+    const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const [tierCounts, statusCounts, recentSubscriptions, mrr] = await Promise.all([
+      prisma.subscription.groupBy({
+        by: ['tier'],
+        _count: true,
+      }),
+      prisma.subscription.groupBy({
+        by: ['status'],
+        _count: true,
+      }),
+      prisma.subscription.findMany({
+        where: { createdAt: { gte: startDate } },
+        include: {
+          user: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      }),
+      // Calculate MRR
+      prisma.subscription.findMany({
+        where: {
+          status: 'ACTIVE',
+          tier: { not: 'FREE' },
+        },
+        select: { tier: true },
+      }),
+    ]);
+
+    // Calculate MRR based on tier prices
+    const tierPrices: Record<string, number> = {
+      BASIC: 9.99,
+      PREMIUM: 19.99,
+      BUSINESS: 49.99,
+    };
+
+    const mrrTotal = mrr.reduce((sum, sub) => sum + (tierPrices[sub.tier] || 0), 0);
+
+    res.json({
+      tierCounts,
+      statusCounts,
+      recentSubscriptions,
+      mrr: mrrTotal,
+      activeSubscribers: mrr.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMatchingAnalytics = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { period = '30d' } = req.query;
+    const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const [totalMatches, mutualMatches, statusCounts, recentMatches] = await Promise.all([
+      prisma.userMatch.count({
+        where: { createdAt: { gte: startDate } },
+      }),
+      prisma.userMatch.count({
+        where: {
+          createdAt: { gte: startDate },
+          status: { in: ['MUTUAL_INTEREST', 'CONNECTED'] },
+        },
+      }),
+      prisma.userMatch.groupBy({
+        by: ['status'],
+        _count: true,
+      }),
+      prisma.userMatch.findMany({
+        where: { createdAt: { gte: startDate } },
+        include: {
+          user: { select: { id: true, name: true, avatar: true } },
+          matchedUser: { select: { id: true, name: true, avatar: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      }),
+    ]);
+
+    res.json({
+      totalMatches,
+      mutualMatches,
+      matchRate: totalMatches > 0 ? (mutualMatches / totalMatches * 100).toFixed(1) : 0,
+      statusCounts,
+      recentMatches,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getActivityAnalytics = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { period = '30d' } = req.query;
+    const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const [totalActivities, activeActivities, typeCounts, popularActivities] = await Promise.all([
+      prisma.socialActivity.count({
+        where: { createdAt: { gte: startDate } },
+      }),
+      prisma.socialActivity.count({
+        where: { status: 'ACTIVE' },
+      }),
+      prisma.socialActivity.groupBy({
+        by: ['type'],
+        _count: true,
+      }),
+      prisma.socialActivity.findMany({
+        orderBy: { currentParticipants: 'desc' },
+        take: 10,
+        include: {
+          creator: { select: { id: true, name: true, avatar: true } },
+          _count: { select: { participants: true } },
+        },
+      }),
+    ]);
+
+    const avgParticipants = await prisma.socialActivity.aggregate({
+      where: { status: 'ACTIVE' },
+      _avg: { currentParticipants: true },
+    });
+
+    res.json({
+      totalActivities,
+      activeActivities,
+      avgParticipants: avgParticipants._avg.currentParticipants || 0,
+      typeCounts,
+      popularActivities,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getRevenueBreakdown = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { period = '30d' } = req.query;
+    const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // Subscription revenue
+    const subscriptions = await prisma.subscription.findMany({
+      where: {
+        status: 'ACTIVE',
+        tier: { not: 'FREE' },
+        currentPeriodStart: { gte: startDate },
+      },
+      select: { tier: true },
+    });
+
+    const tierPrices: Record<string, number> = {
+      BASIC: 9.99,
+      PREMIUM: 19.99,
+      BUSINESS: 49.99,
+    };
+
+    const subscriptionRevenue = subscriptions.reduce(
+      (sum, sub) => sum + (tierPrices[sub.tier] || 0),
+      0
+    );
+
+    // Booking revenue
+    const bookingRevenue = await prisma.booking.aggregate({
+      where: {
+        createdAt: { gte: startDate },
+        paymentStatus: 'COMPLETED',
+      },
+      _sum: { totalPrice: true },
+    });
+
+    // Revenue by day
+    const revenueByDay = await prisma.$queryRaw`
+      SELECT DATE(created_at) as date, SUM(total_price) as revenue
+      FROM "Booking"
+      WHERE created_at >= ${startDate} AND payment_status = 'COMPLETED'
+      GROUP BY DATE(created_at)
+      ORDER BY date
+    `;
+
+    res.json({
+      subscriptionRevenue,
+      bookingRevenue: Number(bookingRevenue._sum.totalPrice) || 0,
+      totalRevenue: subscriptionRevenue + (Number(bookingRevenue._sum.totalPrice) || 0),
+      revenueByDay,
+      period,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

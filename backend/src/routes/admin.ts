@@ -7,7 +7,7 @@ import { requireRole } from '../middleware/auth';
 const router = Router();
 
 // All admin routes require ADMIN or SUPER_ADMIN role
-router.use(requireRole(['ADMIN', 'SUPER_ADMIN']));
+router.use(requireRole('ADMIN', 'SUPER_ADMIN'));
 
 // ==================== DASHBOARD ====================
 
@@ -123,5 +123,26 @@ router.post('/payouts/process', adminController.processPayouts);
 
 router.post('/notifications/send', adminController.sendNotification);
 router.post('/notifications/broadcast', adminController.broadcastNotification);
+
+// ==================== VERIFICATION DOCUMENTS ====================
+
+router.get('/verifications', adminController.getVerificationDocuments);
+router.get('/verifications/stats', adminController.getVerificationStats);
+router.get('/verifications/:id', adminController.getVerificationDocument);
+router.put('/verifications/:id/review', adminController.reviewVerificationDocument);
+
+// ==================== CHAT MODERATION ====================
+
+router.get('/messages/reports', adminController.getMessageReports);
+router.get('/messages/reports/:id', adminController.getMessageReport);
+router.put('/messages/:id/moderate', adminController.moderateMessage);
+router.get('/conversations/:id/messages', adminController.getConversationMessages);
+
+// ==================== SUBSCRIPTION ANALYTICS ====================
+
+router.get('/analytics/subscriptions', adminController.getSubscriptionAnalytics);
+router.get('/analytics/matching', adminController.getMatchingAnalytics);
+router.get('/analytics/activities', adminController.getActivityAnalytics);
+router.get('/analytics/revenue-breakdown', adminController.getRevenueBreakdown);
 
 export default router;

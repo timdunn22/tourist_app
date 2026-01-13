@@ -27,6 +27,13 @@ import adminRoutes from './routes/admin';
 import webhookRoutes from './routes/webhooks';
 import safetyRoutes from './routes/safety';
 import oauthRoutes from './routes/oauth';
+import onboardingRoutes from './routes/onboarding';
+import verificationRoutes from './routes/verification';
+import matchingRoutes from './routes/matching';
+import activitiesRoutes from './routes/activities';
+import mapRoutes from './routes/map';
+import chatRoutes from './routes/chat';
+import subscriptionRoutes from './routes/subscription';
 
 dotenv.config();
 
@@ -92,7 +99,17 @@ app.use('/api/stays', stayRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/safety', safetyRoutes);
+app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/verification', verificationRoutes);
+app.use('/api/matching', matchingRoutes);
+app.use('/api/activities', activitiesRoutes);
+app.use('/api/map', mapRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/admin', authMiddleware, adminRoutes);
+
+// Static file serving for uploads (development)
+app.use('/uploads', express.static('uploads'));
 
 // Error handling
 app.use(errorHandler);
@@ -106,6 +123,35 @@ app.use((req, res) => {
 io.on('connection', (socket) => {
   logger.info(`Socket connected: ${socket.id}`);
 
+  // Join user's personal room for notifications
+  socket.on('authenticate', (userId: string) => {
+    socket.join(`user:${userId}`);
+    logger.info(`Socket ${socket.id} authenticated as user ${userId}`);
+  });
+
+  // Join chat room
+  socket.on('join-chat', (conversationId: string) => {
+    socket.join(`chat:${conversationId}`);
+    logger.info(`Socket ${socket.id} joined chat ${conversationId}`);
+  });
+
+  // Leave chat room
+  socket.on('leave-chat', (conversationId: string) => {
+    socket.leave(`chat:${conversationId}`);
+  });
+
+  // Join activity room
+  socket.on('join-activity', (activityId: string) => {
+    socket.join(`activity:${activityId}`);
+    logger.info(`Socket ${socket.id} joined activity ${activityId}`);
+  });
+
+  // Leave activity room
+  socket.on('leave-activity', (activityId: string) => {
+    socket.leave(`activity:${activityId}`);
+  });
+
+  // Legacy room support
   socket.on('join-room', (roomId: string) => {
     socket.join(roomId);
     logger.info(`Socket ${socket.id} joined room ${roomId}`);
@@ -115,10 +161,30 @@ io.on('connection', (socket) => {
     socket.leave(roomId);
   });
 
-  socket.on('send-message', (data) => {
-    io.to(data.conversationId).emit('new-message', data);
+  // Typing indicator
+  socket.on('typing', (data: { conversationId: string; userId: string }) => {
+    socket.to(`chat:${data.conversationId}`).emit('user-typing', {
+      conversationId: data.conversationId,
+      userId: data.userId,
+    });
   });
 
+  // Stop typing indicator
+  socket.on('stop-typing', (data: { conversationId: string; userId: string }) => {
+    socket.to(`chat:${data.conversationId}`).emit('user-stop-typing', {
+      conversationId: data.conversationId,
+      userId: data.userId,
+    });
+  });
+
+  // Send message (for real-time updates)
+  socket.on('send-message', (data) => {
+    if (data.conversationId) {
+      io.to(`chat:${data.conversationId}`).emit('new-message', data);
+    }
+  });
+
+  // Location update
   socket.on('location-update', (data) => {
     io.to(`booking-${data.bookingId}`).emit('location-updated', data);
   });

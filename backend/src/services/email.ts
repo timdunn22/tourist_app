@@ -81,6 +81,12 @@ const templates: Record<string, (data: any) => { subject: string; html: string }
 };
 
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
+  // Skip email sending in dev mode when SKIP_EXTERNAL_SERVICES is true
+  if (process.env.SKIP_EXTERNAL_SERVICES === 'true') {
+    logger.info(`[DEV] Skipping email to ${options.to}: ${options.subject || options.template}`);
+    return;
+  }
+
   try {
     let html = options.html;
     let subject = options.subject;

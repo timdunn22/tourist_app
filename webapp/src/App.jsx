@@ -21,6 +21,11 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const NearbyTravelersPage = lazy(() => import('./pages/NearbyTravelersPage'));
 const TripPlanningPage = lazy(() => import('./pages/TripPlanningPage'));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
+const VerificationPage = lazy(() => import('./pages/VerificationPage'));
+const DiscoverPage = lazy(() => import('./pages/DiscoverPage'));
+const ActivitiesPage = lazy(() => import('./pages/ActivitiesPage'));
+const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 
 function PrivateRoute({ children }) {
   const { isAuthenticated } = useStore();
@@ -34,8 +39,17 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/signup" element={<Navigate to="/register" replace />} />
+        <Route path="/onboarding" element={
+          <PrivateRoute><OnboardingPage /></PrivateRoute>
+        } />
+        <Route path="/verification" element={
+          <PrivateRoute><VerificationPage /></PrivateRoute>
+        } />
 
         <Route path="/" element={<MainLayout />}>
+          <Route path="discover" element={<DiscoverPage />} />
+          <Route path="activities" element={<ActivitiesPage />} />
+          <Route path="activities/:id" element={<ActivitiesPage />} />
           <Route index element={<HomePage />} />
           <Route path="explore" element={<ExplorePage />} />
           <Route path="experience/:id" element={<ExperienceDetailPage />} />
@@ -54,6 +68,8 @@ function App() {
           <Route path="profile" element={
             <PrivateRoute><ProfilePage /></PrivateRoute>
           } />
+          <Route path="subscription" element={<SubscriptionPage />} />
+          <Route path="subscription/success" element={<SubscriptionPage />} />
         </Route>
       </Routes>
     </Suspense>

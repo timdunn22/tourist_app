@@ -67,7 +67,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-export const requireRole = (roles: string[]) => {
+export const requireRole = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -80,3 +80,6 @@ export const requireRole = (roles: string[]) => {
     next();
   };
 };
+
+// Alias for authenticate
+export const authenticate = authMiddleware;

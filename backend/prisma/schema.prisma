@@ -2,7 +2,7 @@
 // Using Prisma ORM with PostgreSQL
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
 }
 
@@ -14,51 +14,135 @@ datasource db {
 // ==================== USERS ====================
 
 model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  phone             String?   @unique
-  passwordHash      String
-  name              String
-  avatar            String?
-  role              UserRole  @default(TRAVELER)
-  status            UserStatus @default(ACTIVE)
-  emailVerified     Boolean   @default(false)
-  phoneVerified     Boolean   @default(false)
+  id            String     @id @default(cuid())
+  email         String     @unique
+  phone         String?    @unique
+  passwordHash  String
+  name          String
+  avatar        String?
+  role          UserRole   @default(TRAVELER)
+  status        UserStatus @default(ACTIVE)
+  emailVerified Boolean    @default(false)
+  phoneVerified Boolean    @default(false)
 
   // OAuth
-  googleId          String?   @unique
-  facebookId        String?   @unique
-  
+  googleId   String? @unique
+  facebookId String? @unique
+
   // Profile
-  bio               String?
-  location          String?
-  languages         String[]
-  
+  bio       String?
+  location  String?
+  languages String[]
+
   // Traveler specific
-  tripsCompleted    Int       @default(0)
-  countriesVisited  String[]
-  preferences       Json?
-  
+  tripsCompleted   Int      @default(0)
+  countriesVisited String[]
+  preferences      Json?
+
+  // === NEW: Onboarding & Profile Fields ===
+  dateOfBirth DateTime?
+  gender      Gender?
+
+  // Connection preferences (who to meet)
+  connectionPrefs ConnectionPreference[]
+  ageRangeMin     Int? // Preferred age range minimum
+  ageRangeMax     Int? // Preferred age range maximum
+
+  // Interests & style
+  activityInterests   String[] // ["adventure", "food", "culture", etc.]
+  travelStyle         TravelStyle?
+  dietaryRestrictions String[]
+  accessibilityNeeds  String[]
+  goalsMotivation     String[] // ["make_friends", "find_travel_buddy", "attend_experiences", etc.]
+
+  // Onboarding status
+  onboardingCompleted Boolean @default(false)
+  onboardingStep      Int     @default(0)
+
+  // Verification
+  verificationLevel VerificationLevel @default(UNVERIFIED)
+  verifiedAt        DateTime?
+
+  // Availability for matching
+  availableFrom  DateTime?
+  availableTo    DateTime?
+  currentCity    String?
+  currentCountry String?
+  timezone       String?
+
   // Timestamps
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  lastLoginAt       DateTime?
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
   // Relations
-  guide             Guide?
-  bookingsAsTraveler Booking[] @relation("TravelerBookings")
-  reviews           Review[]
-  messages          Message[] @relation("UserMessages")
-  conversations     ConversationParticipant[]
-  notifications     Notification[]
-  savedExperiences  SavedExperience[]
-  paymentMethods    PaymentMethod[]
-  emergencyContacts EmergencyContact[]
-  
+  guide              Guide?
+  bookingsAsTraveler Booking[]                 @relation("TravelerBookings")
+  reviews            Review[]
+  messages           Message[]                 @relation("UserMessages")
+  conversations      ConversationParticipant[]
+  notifications      Notification[]
+  savedExperiences   SavedExperience[]
+  paymentMethods     PaymentMethod[]
+  emergencyContacts  EmergencyContact[]
+
+  // === NEW: Social & Verification Relations ===
+  verificationDocuments  VerificationDocument[]
+  matchesInitiated       UserMatch[]            @relation("MatchInitiator")
+  matchesReceived        UserMatch[]            @relation("MatchTarget")
+  activitiesCreated      SocialActivity[]       @relation("ActivityCreator")
+  activityParticipations ActivityParticipant[]
+  activityMessages       ActivityMessage[]
+  subscription           Subscription?
+  profileViewsGiven      ProfileView[]          @relation("ProfileViewer")
+  profileViewsReceived   ProfileView[]          @relation("ProfileViewed")
+  userReviewsGiven       UserReview[]           @relation("ReviewerUser")
+  userReviewsReceived    UserReview[]           @relation("ReviewedUser")
+  messageReports         MessageReport[]
+
   @@index([email])
   @@index([phone])
   @@index([role])
   @@index([status])
+  @@index([verificationLevel])
+  @@index([currentCity])
+  @@index([onboardingCompleted])
+}
+
+// === NEW: User Profile Enums ===
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+}
+
+enum ConnectionPreference {
+  MALE
+  FEMALE
+  NON_BINARY
+  ANY
+}
+
+enum TravelStyle {
+  SOLO
+  GROUP
+  COUPLE
+  FAMILY
+  BUDGET
+  LUXURY
+  ADVENTURE
+  RELAXED
+  BACKPACKER
+}
+
+enum VerificationLevel {
+  UNVERIFIED
+  EMAIL_VERIFIED
+  PHONE_VERIFIED
+  ID_VERIFIED
+  FULLY_VERIFIED
 }
 
 enum UserRole {
@@ -78,45 +162,45 @@ enum UserStatus {
 // ==================== GUIDES ====================
 
 model Guide {
-  id                String      @id @default(cuid())
-  userId            String      @unique
-  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Verification
-  verified          Boolean     @default(false)
-  verifiedAt        DateTime?
-  verificationDocs  Json?       // ID, certificates, etc.
-  
+  verified         Boolean   @default(false)
+  verifiedAt       DateTime?
+  verificationDocs Json? // ID, certificates, etc.
+
   // Level system
-  level             GuideLevel  @default(COMMUNITY)
-  trustScore        Int         @default(50)
-  
+  level      GuideLevel @default(COMMUNITY)
+  trustScore Int        @default(50)
+
   // Stats
-  completedTours    Int         @default(0)
-  totalEarnings     Decimal     @default(0) @db.Decimal(10, 2)
-  rating            Decimal     @default(0) @db.Decimal(2, 1)
-  reviewCount       Int         @default(0)
-  responseTime      Int?        // Average response time in minutes
-  
+  completedTours Int     @default(0)
+  totalEarnings  Decimal @default(0) @db.Decimal(10, 2)
+  rating         Decimal @default(0) @db.Decimal(2, 1)
+  reviewCount    Int     @default(0)
+  responseTime   Int? // Average response time in minutes
+
   // Profile
-  specialties       String[]
-  badges            String[]
-  availability      Json?       // Weekly schedule
-  
+  specialties  String[]
+  badges       String[]
+  availability Json? // Weekly schedule
+
   // Banking
-  bankDetails       Json?
-  stripeAccountId   String?
-  
+  bankDetails     Json?
+  stripeAccountId String?
+
   // Timestamps
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  experiences       Experience[]
-  bookings          Booking[]   @relation("GuideBookings")
-  trainings         GuideTraining[]
-  earnings          Earning[]
-  
+  experiences Experience[]
+  bookings    Booking[]       @relation("GuideBookings")
+  trainings   GuideTraining[]
+  earnings    Earning[]
+
   @@index([verified])
   @@index([level])
   @@index([trustScore])
@@ -124,80 +208,80 @@ model Guide {
 }
 
 enum GuideLevel {
-  COMMUNITY       // Level 0
-  TRAINED         // Level 1 - Platform Trained
-  PROFESSIONAL    // Level 2
-  MASTER          // Level 3
+  COMMUNITY // Level 0
+  TRAINED // Level 1 - Platform Trained
+  PROFESSIONAL // Level 2
+  MASTER // Level 3
 }
 
 // ==================== EXPERIENCES ====================
 
 model Experience {
-  id                String      @id @default(cuid())
-  guideId           String
-  guide             Guide       @relation(fields: [guideId], references: [id], onDelete: Cascade)
-  
+  id      String @id @default(cuid())
+  guideId String
+  guide   Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
   // Basic info
-  title             String
-  slug              String      @unique
-  description       String
-  shortDescription  String?
-  
+  title            String
+  slug             String  @unique
+  description      String
+  shortDescription String?
+
   // Categorization
-  categoryId        String
-  category          Category    @relation(fields: [categoryId], references: [id])
-  tags              String[]
-  
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  tags       String[]
+
   // Details
-  duration          Int         // Duration in minutes
-  price             Decimal     @db.Decimal(10, 2)
-  currency          String      @default("USD")
-  groupSizeMin      Int         @default(1)
-  groupSizeMax      Int         @default(10)
-  difficulty        Difficulty  @default(EASY)
-  
+  duration     Int // Duration in minutes
+  price        Decimal    @db.Decimal(10, 2)
+  currency     String     @default("USD")
+  groupSizeMin Int        @default(1)
+  groupSizeMax Int        @default(10)
+  difficulty   Difficulty @default(EASY)
+
   // Location
-  meetingPoint      String
-  meetingPointLat   Decimal?    @db.Decimal(10, 8)
-  meetingPointLng   Decimal?    @db.Decimal(11, 8)
-  area              String?
-  city              String
-  country           String
-  
+  meetingPoint    String
+  meetingPointLat Decimal? @db.Decimal(10, 8)
+  meetingPointLng Decimal? @db.Decimal(11, 8)
+  area            String?
+  city            String
+  country         String
+
   // Media
-  images            String[]
-  videoUrl          String?
-  
+  images   String[]
+  videoUrl String?
+
   // What's included
-  includes          String[]
-  notIncluded       String[]
-  requirements      String[]
-  
+  includes     String[]
+  notIncluded  String[]
+  requirements String[]
+
   // Availability
-  availability      Json?       // Days and times
-  instantBook       Boolean     @default(true)
-  advanceNotice     Int         @default(24) // Hours
-  
+  availability  Json? // Days and times
+  instantBook   Boolean @default(true)
+  advanceNotice Int     @default(24) // Hours
+
   // Status
-  status            ExperienceStatus @default(DRAFT)
-  featured          Boolean     @default(false)
-  
+  status   ExperienceStatus @default(DRAFT)
+  featured Boolean          @default(false)
+
   // Stats
-  bookingCount      Int         @default(0)
-  viewCount         Int         @default(0)
-  rating            Decimal     @default(0) @db.Decimal(2, 1)
-  reviewCount       Int         @default(0)
-  
+  bookingCount Int     @default(0)
+  viewCount    Int     @default(0)
+  rating       Decimal @default(0) @db.Decimal(2, 1)
+  reviewCount  Int     @default(0)
+
   // Timestamps
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  publishedAt       DateTime?
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime?
+
   // Relations
-  bookings          Booking[]
-  reviews           Review[]
-  savedBy           SavedExperience[]
-  
+  bookings Booking[]
+  reviews  Review[]
+  savedBy  SavedExperience[]
+
   @@index([guideId])
   @@index([categoryId])
   @@index([status])
@@ -225,20 +309,20 @@ enum Difficulty {
 // ==================== CATEGORIES ====================
 
 model Category {
-  id                String      @id @default(cuid())
-  name              String
-  slug              String      @unique
-  description       String?
-  icon              String
-  image             String?
-  parentId          String?
-  parent            Category?   @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children          Category[]  @relation("CategoryHierarchy")
-  sortOrder         Int         @default(0)
-  active            Boolean     @default(true)
-  
-  experiences       Experience[]
-  
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  icon        String
+  image       String?
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  sortOrder   Int        @default(0)
+  active      Boolean    @default(true)
+
+  experiences Experience[]
+
   @@index([parentId])
   @@index([active])
 }
@@ -246,56 +330,56 @@ model Category {
 // ==================== BOOKINGS ====================
 
 model Booking {
-  id                String        @id @default(cuid())
-  bookingNumber     String        @unique
-  
+  id            String @id @default(cuid())
+  bookingNumber String @unique
+
   // Parties
-  travelerId        String
-  traveler          User          @relation("TravelerBookings", fields: [travelerId], references: [id])
-  guideId           String
-  guide             Guide         @relation("GuideBookings", fields: [guideId], references: [id])
-  experienceId      String
-  experience        Experience    @relation(fields: [experienceId], references: [id])
-  
+  travelerId   String
+  traveler     User       @relation("TravelerBookings", fields: [travelerId], references: [id])
+  guideId      String
+  guide        Guide      @relation("GuideBookings", fields: [guideId], references: [id])
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id])
+
   // Booking details
-  date              DateTime
-  startTime         String
-  endTime           String?
-  guestCount        Int
-  specialRequests   String?
-  
+  date            DateTime
+  startTime       String
+  endTime         String?
+  guestCount      Int
+  specialRequests String?
+
   // Pricing
-  basePrice         Decimal       @db.Decimal(10, 2)
-  serviceFee        Decimal       @db.Decimal(10, 2)
-  taxes             Decimal       @default(0) @db.Decimal(10, 2)
-  tip               Decimal       @default(0) @db.Decimal(10, 2)
-  totalPrice        Decimal       @db.Decimal(10, 2)
-  currency          String        @default("USD")
-  
+  basePrice  Decimal @db.Decimal(10, 2)
+  serviceFee Decimal @db.Decimal(10, 2)
+  taxes      Decimal @default(0) @db.Decimal(10, 2)
+  tip        Decimal @default(0) @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
+  currency   String  @default("USD")
+
   // Payment
-  paymentStatus     PaymentStatus @default(PENDING)
-  paymentIntentId   String?
-  paidAt            DateTime?
-  
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentIntentId String?
+  paidAt          DateTime?
+
   // Status
-  status            BookingStatus @default(PENDING)
-  cancelledBy       String?
+  status             BookingStatus @default(PENDING)
+  cancelledBy        String?
   cancellationReason String?
-  
+
   // Live tracking
-  startedAt         DateTime?
-  completedAt       DateTime?
-  gpsTrackingEnabled Boolean      @default(true)
-  
+  startedAt          DateTime?
+  completedAt        DateTime?
+  gpsTrackingEnabled Boolean   @default(true)
+
   // Timestamps
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  review            Review?
-  messages          Message[]
-  trackingPoints    TrackingPoint[]
-  
+  review         Review?
+  messages       Message[]
+  trackingPoints TrackingPoint[]
+
   @@index([travelerId])
   @@index([guideId])
   @@index([experienceId])
@@ -326,44 +410,55 @@ enum PaymentStatus {
 // ==================== REVIEWS ====================
 
 model Review {
-  id                String    @id @default(cuid())
-  bookingId         String    @unique
-  booking           Booking   @relation(fields: [bookingId], references: [id])
-  experienceId      String
-  experience        Experience @relation(fields: [experienceId], references: [id])
-  userId            String
-  user              User      @relation(fields: [userId], references: [id])
+  id           String     @id @default(cuid())
+  bookingId    String     @unique
+  booking      Booking    @relation(fields: [bookingId], references: [id])
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id])
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
 
   // Ratings
-  overallRating     Int       // 1-5
-  knowledgeRating   Int?
-  safetyRating      Int?
-  valueRating       Int?
+  overallRating       Int // 1-5
+  knowledgeRating     Int?
+  safetyRating        Int?
+  valueRating         Int?
   communicationRating Int?
 
   // Content
-  title             String?
-  content           String
-  images            String[]
+  title   String?
+  content String
+  images  String[]
 
   // Flags
-  verified          Boolean   @default(true) // GPS verified attendance
-  featured          Boolean   @default(false)
+  verified Boolean @default(true) // GPS verified attendance
+  featured Boolean @default(false)
 
   // Response
-  guideResponse     String?
-  guideRespondedAt  DateTime?
+  guideResponse    String?
+  guideRespondedAt DateTime?
 
   // Moderation
-  status            ReviewStatus @default(PUBLISHED)
-  reportCount       Int       @default(0)
+  status      ReviewStatus @default(PUBLISHED)
+  reportCount Int          @default(0)
 
   // AI-Powered Review Validation
-  aiValidation      ReviewValidation?
+  aiValidation ReviewValidation?
+
+  // === NEW: Enhanced Review Features ===
+  // Additional rating dimensions
+  friendlinessRating Int?
+  punctualityRating  Int?
+  authenticityRating Int?
+
+  // Helpfulness tracking
+  helpfulCount     Int                 @default(0)
+  notHelpfulCount  Int                 @default(0)
+  helpfulnessVotes ReviewHelpfulness[]
 
   // Timestamps
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([experienceId])
   @@index([userId])
@@ -372,31 +467,31 @@ model Review {
 
 // AI-Powered Review Validation (Anti-Fake System)
 model ReviewValidation {
-  id                  String    @id @default(cuid())
-  reviewId            String    @unique
-  review              Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  reviewId String @unique
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   // Validation scores (0-100)
-  confidenceScore     Int       @default(50)
-  bookingVerified     Boolean   @default(false)
-  gpsValidated        Boolean   @default(false)
-  timeValidated       Boolean   @default(false)
+  confidenceScore Int     @default(50)
+  bookingVerified Boolean @default(false)
+  gpsValidated    Boolean @default(false)
+  timeValidated   Boolean @default(false)
 
   // AI Analysis
-  textPatternScore    Int?      // Spam/fake pattern detection
-  sentimentScore      Int?      // Sentiment analysis
-  repetitionScore     Int?      // Checks for copy-paste patterns
-  reviewerTrustScore  Int?      // Based on reviewer history
+  textPatternScore   Int? // Spam/fake pattern detection
+  sentimentScore     Int? // Sentiment analysis
+  repetitionScore    Int? // Checks for copy-paste patterns
+  reviewerTrustScore Int? // Based on reviewer history
 
   // Flags
-  flags               String[]  // ["SUSPICIOUS_PATTERN", "NEW_REVIEWER", "RAPID_SUBMISSION", etc.]
-  manualReview        Boolean   @default(false)
+  flags        String[] // ["SUSPICIOUS_PATTERN", "NEW_REVIEWER", "RAPID_SUBMISSION", etc.]
+  manualReview Boolean  @default(false)
 
   // Badges earned by this review
-  badges              String[]  // ["Verified Experience", "GPS-Validated", "High-Trust Reviewer"]
+  badges String[] // ["Verified Experience", "GPS-Validated", "High-Trust Reviewer"]
 
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum ReviewStatus {
@@ -409,45 +504,62 @@ enum ReviewStatus {
 // ==================== MESSAGING ====================
 
 model Conversation {
-  id                String    @id @default(cuid())
-  bookingId         String?
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
-  participants      ConversationParticipant[]
-  messages          Message[]
+  id        String  @id @default(cuid())
+  bookingId String?
+
+  // === NEW: Conversation Type ===
+  type ConversationType @default(PRIVATE)
+
+  // For room-based chats (city/country)
+  roomId   String? @unique // "city:kathmandu", "country:nepal"
+  roomName String?
+
+  // For activity chats
+  activityId String?
+
+  // Settings
+  isModerated Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([type])
+  @@index([roomId])
+  @@index([activityId])
 }
 
 model ConversationParticipant {
-  id                String    @id @default(cuid())
-  conversationId    String
-  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  userId            String
-  user              User      @relation(fields: [userId], references: [id])
-  
-  lastReadAt        DateTime?
-  
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+
+  lastReadAt DateTime?
+
   @@unique([conversationId, userId])
 }
 
 model Message {
-  id                String    @id @default(cuid())
-  conversationId    String
-  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderId          String
-  sender            User      @relation("UserMessages", fields: [senderId], references: [id])
-  bookingId         String?
-  booking           Booking?  @relation(fields: [bookingId], references: [id])
-  
-  content           String
-  type              MessageType @default(TEXT)
-  attachments       String[]
-  
-  readAt            DateTime?
-  
-  createdAt         DateTime  @default(now())
-  
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("UserMessages", fields: [senderId], references: [id])
+  bookingId      String?
+  booking        Booking?     @relation(fields: [bookingId], references: [id])
+
+  content     String
+  type        MessageType @default(TEXT)
+  attachments String[]
+
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
   @@index([conversationId])
   @@index([senderId])
 }
@@ -463,54 +575,54 @@ enum MessageType {
 // ==================== STAYS ====================
 
 model Stay {
-  id                String      @id @default(cuid())
-  hostId            String
-  
+  id     String @id @default(cuid())
+  hostId String
+
   // Basic info
-  title             String
-  slug              String      @unique
-  description       String
-  type              StayType
-  
+  title       String
+  slug        String   @unique
+  description String
+  type        StayType
+
   // Location
-  address           String
-  city              String
-  country           String
-  latitude          Decimal?    @db.Decimal(10, 8)
-  longitude         Decimal?    @db.Decimal(11, 8)
-  
+  address   String
+  city      String
+  country   String
+  latitude  Decimal? @db.Decimal(10, 8)
+  longitude Decimal? @db.Decimal(11, 8)
+
   // Details
-  pricePerNight     Decimal     @db.Decimal(10, 2)
-  currency          String      @default("USD")
-  maxGuests         Int
-  bedrooms          Int
-  beds              Int
-  bathrooms         Int
-  
+  pricePerNight Decimal @db.Decimal(10, 2)
+  currency      String  @default("USD")
+  maxGuests     Int
+  bedrooms      Int
+  beds          Int
+  bathrooms     Int
+
   // Features
-  amenities         String[]
-  houseRules        String[]
-  badges            String[]
-  
+  amenities  String[]
+  houseRules String[]
+  badges     String[]
+
   // Media
-  images            String[]
-  
+  images String[]
+
   // Availability
-  instantBook       Boolean     @default(true)
-  minNights         Int         @default(1)
-  maxNights         Int         @default(30)
-  
+  instantBook Boolean @default(true)
+  minNights   Int     @default(1)
+  maxNights   Int     @default(30)
+
   // Status
-  status            ExperienceStatus @default(DRAFT)
-  verified          Boolean     @default(false)
-  
+  status   ExperienceStatus @default(DRAFT)
+  verified Boolean          @default(false)
+
   // Stats
-  rating            Decimal     @default(0) @db.Decimal(2, 1)
-  reviewCount       Int         @default(0)
-  
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  
+  rating      Decimal @default(0) @db.Decimal(2, 1)
+  reviewCount Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([city])
   @@index([type])
   @@index([status])
@@ -529,90 +641,90 @@ enum StayType {
 // ==================== SERVICES ====================
 
 model Service {
-  id                String      @id @default(cuid())
-  
-  title             String
-  slug              String      @unique
-  description       String
-  icon              String
-  
-  price             Decimal     @db.Decimal(10, 2)
-  currency          String      @default("USD")
-  duration          String      // e.g., "30 min", "As needed"
-  
-  categoryId        String?
-  active            Boolean     @default(true)
-  sortOrder         Int         @default(0)
-  
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  id String @id @default(cuid())
+
+  title       String
+  slug        String @unique
+  description String
+  icon        String
+
+  price    Decimal @db.Decimal(10, 2)
+  currency String  @default("USD")
+  duration String // e.g., "30 min", "As needed"
+
+  categoryId String?
+  active     Boolean @default(true)
+  sortOrder  Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ==================== TRAINING ====================
 
 model Training {
-  id                String      @id @default(cuid())
-  
-  title             String
-  slug              String      @unique
-  description       String
-  icon              String
-  
-  duration          Int         // Minutes
-  content           Json        // Modules, videos, quizzes
-  
-  required          Boolean     @default(false)
-  advanced          Boolean     @default(false)
-  badgeAwarded      String?
-  levelRequired     GuideLevel  @default(COMMUNITY)
-  
-  sortOrder         Int         @default(0)
-  active            Boolean     @default(true)
-  
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  
-  completions       GuideTraining[]
+  id String @id @default(cuid())
+
+  title       String
+  slug        String @unique
+  description String
+  icon        String
+
+  duration Int // Minutes
+  content  Json // Modules, videos, quizzes
+
+  required      Boolean    @default(false)
+  advanced      Boolean    @default(false)
+  badgeAwarded  String?
+  levelRequired GuideLevel @default(COMMUNITY)
+
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  completions GuideTraining[]
 }
 
 model GuideTraining {
-  id                String    @id @default(cuid())
-  guideId           String
-  guide             Guide     @relation(fields: [guideId], references: [id], onDelete: Cascade)
-  trainingId        String
-  training          Training  @relation(fields: [trainingId], references: [id])
-  
-  progress          Int       @default(0) // Percentage
-  completed         Boolean   @default(false)
-  completedAt       DateTime?
-  score             Int?      // Quiz score
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
+  id         String   @id @default(cuid())
+  guideId    String
+  guide      Guide    @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  trainingId String
+  training   Training @relation(fields: [trainingId], references: [id])
+
+  progress    Int       @default(0) // Percentage
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  score       Int? // Quiz score
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([guideId, trainingId])
 }
 
 // ==================== EARNINGS ====================
 
 model Earning {
-  id                String      @id @default(cuid())
-  guideId           String
-  guide             Guide       @relation(fields: [guideId], references: [id])
-  
-  type              EarningType
-  amount            Decimal     @db.Decimal(10, 2)
-  currency          String      @default("USD")
-  
-  description       String?
-  referenceId       String?     // Booking ID, etc.
-  
-  status            EarningStatus @default(PENDING)
-  paidAt            DateTime?
-  payoutId          String?
-  
-  createdAt         DateTime    @default(now())
-  
+  id      String @id @default(cuid())
+  guideId String
+  guide   Guide  @relation(fields: [guideId], references: [id])
+
+  type     EarningType
+  amount   Decimal     @db.Decimal(10, 2)
+  currency String      @default("USD")
+
+  description String?
+  referenceId String? // Booking ID, etc.
+
+  status   EarningStatus @default(PENDING)
+  paidAt   DateTime?
+  payoutId String?
+
+  createdAt DateTime @default(now())
+
   @@index([guideId])
   @@index([status])
   @@index([createdAt])
@@ -637,16 +749,16 @@ enum EarningStatus {
 // ==================== GPS TRACKING ====================
 
 model TrackingPoint {
-  id                String    @id @default(cuid())
-  bookingId         String
-  booking           Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  
-  latitude          Decimal   @db.Decimal(10, 8)
-  longitude         Decimal   @db.Decimal(11, 8)
-  accuracy          Int?
-  
-  recordedAt        DateTime  @default(now())
-  
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  latitude  Decimal @db.Decimal(10, 8)
+  longitude Decimal @db.Decimal(11, 8)
+  accuracy  Int?
+
+  recordedAt DateTime @default(now())
+
   @@index([bookingId])
   @@index([recordedAt])
 }
@@ -654,20 +766,20 @@ model TrackingPoint {
 // ==================== NOTIFICATIONS ====================
 
 model Notification {
-  id                String    @id @default(cuid())
-  userId            String
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type              String
-  title             String
-  message           String
-  data              Json?
-  
-  read              Boolean   @default(false)
-  readAt            DateTime?
-  
-  createdAt         DateTime  @default(now())
-  
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    String
+  title   String
+  message String
+  data    Json?
+
+  read   Boolean   @default(false)
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
   @@index([userId])
   @@index([read])
   @@index([createdAt])
@@ -676,97 +788,97 @@ model Notification {
 // ==================== OTHER ====================
 
 model SavedExperience {
-  id                String    @id @default(cuid())
-  userId            String
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  experienceId      String
-  experience        Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
-  
-  createdAt         DateTime  @default(now())
-  
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
   @@unique([userId, experienceId])
 }
 
 model PaymentMethod {
-  id                String    @id @default(cuid())
-  userId            String
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type              String    // card, wallet
-  last4             String?
-  brand             String?
-  expiryMonth       Int?
-  expiryYear        Int?
-  
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        String // card, wallet
+  last4       String?
+  brand       String?
+  expiryMonth Int?
+  expiryYear  Int?
+
   stripePaymentMethodId String?
-  isDefault         Boolean   @default(false)
-  
-  createdAt         DateTime  @default(now())
-  
+  isDefault             Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
   @@index([userId])
 }
 
 model EmergencyContact {
-  id                String    @id @default(cuid())
-  userId            String
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  name              String
-  phone             String
-  relationship      String?
-  
-  createdAt         DateTime  @default(now())
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name         String
+  phone        String
+  relationship String?
+
+  createdAt DateTime @default(now())
 }
 
 // ==================== ADMIN ====================
 
 model Setting {
-  id                String    @id @default(cuid())
-  key               String    @unique
-  value             Json
-  description       String?
-  category          String    @default("general")
-  
-  updatedAt         DateTime  @updatedAt
-  
+  id          String  @id @default(cuid())
+  key         String  @unique
+  value       Json
+  description String?
+  category    String  @default("general")
+
+  updatedAt DateTime @updatedAt
+
   @@index([category])
 }
 
 model AuditLog {
-  id                String    @id @default(cuid())
-  userId            String?
-  action            String
-  entity            String
-  entityId          String?
-  oldValue          Json?
-  newValue          Json?
-  ipAddress         String?
-  userAgent         String?
-  
-  createdAt         DateTime  @default(now())
-  
+  id        String  @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
   @@index([userId])
   @@index([entity])
   @@index([createdAt])
 }
 
 model SupportTicket {
-  id                String    @id @default(cuid())
-  ticketNumber      String    @unique
-  userId            String
-  
-  subject           String
-  description       String
-  category          String
-  priority          TicketPriority @default(MEDIUM)
-  status            TicketStatus @default(OPEN)
-  
-  assignedTo        String?
-  resolvedAt        DateTime?
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
+  id           String @id @default(cuid())
+  ticketNumber String @unique
+  userId       String
+
+  subject     String
+  description String
+  category    String
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+
+  assignedTo String?
+  resolvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([userId])
   @@index([status])
   @@index([priority])
@@ -788,23 +900,23 @@ enum TicketStatus {
 }
 
 model Location {
-  id                String    @id @default(cuid())
-  name              String
-  slug              String    @unique
-  type              String    // country, city, region
-  parentId          String?
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  type     String // country, city, region
+  parentId String?
 
-  latitude          Decimal?  @db.Decimal(10, 8)
-  longitude         Decimal?  @db.Decimal(11, 8)
+  latitude  Decimal? @db.Decimal(10, 8)
+  longitude Decimal? @db.Decimal(11, 8)
 
-  featured          Boolean   @default(false)
-  active            Boolean   @default(true)
+  featured Boolean @default(false)
+  active   Boolean @default(true)
 
-  image             String?
-  description       String?
+  image       String?
+  description String?
 
   // Safety zones in this location
-  safetyZones       SafetyZone[]
+  safetyZones SafetyZone[]
 
   @@index([type])
   @@index([parentId])
@@ -814,31 +926,31 @@ model Location {
 
 // Safety zones (unsafe areas, warnings)
 model SafetyZone {
-  id                String      @id @default(cuid())
-  locationId        String?
-  location          Location?   @relation(fields: [locationId], references: [id])
+  id         String    @id @default(cuid())
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id])
 
   // Zone details
-  name              String
-  description       String
-  type              SafetyZoneType
+  name        String
+  description String
+  type        SafetyZoneType
 
   // Geofence polygon (array of lat/lng points)
-  coordinates       Json        // [{ lat: number, lng: number }]
-  radius            Int?        // For circular zones (meters)
+  coordinates Json // [{ lat: number, lng: number }]
+  radius      Int? // For circular zones (meters)
 
   // Alert settings
-  alertTitle        String
-  alertMessage      String
-  severity          SafetySeverity @default(CAUTION)
+  alertTitle   String
+  alertMessage String
+  severity     SafetySeverity @default(CAUTION)
 
   // Status
-  active            Boolean     @default(true)
-  validFrom         DateTime?
-  validUntil        DateTime?
+  active     Boolean   @default(true)
+  validFrom  DateTime?
+  validUntil DateTime?
 
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([locationId])
   @@index([type])
@@ -863,32 +975,32 @@ enum SafetySeverity {
 
 // Panic button alerts
 model PanicAlert {
-  id                String      @id @default(cuid())
-  userId            String
-  bookingId         String?
+  id        String  @id @default(cuid())
+  userId    String
+  bookingId String?
 
   // Location at time of alert
-  latitude          Decimal     @db.Decimal(10, 8)
-  longitude         Decimal     @db.Decimal(11, 8)
-  accuracy          Int?
+  latitude  Decimal @db.Decimal(10, 8)
+  longitude Decimal @db.Decimal(11, 8)
+  accuracy  Int?
 
   // Alert details
-  type              PanicAlertType
-  message           String?
-  audioRecording    String?     // URL to audio if recorded
+  type           PanicAlertType
+  message        String?
+  audioRecording String? // URL to audio if recorded
 
   // Status
-  status            PanicAlertStatus @default(ACTIVE)
-  resolvedAt        DateTime?
-  resolvedBy        String?
-  resolution        String?
+  status     PanicAlertStatus @default(ACTIVE)
+  resolvedAt DateTime?
+  resolvedBy String?
+  resolution String?
 
   // Response
-  respondedAt       DateTime?
-  responderNotes    String?
+  respondedAt    DateTime?
+  responderNotes String?
 
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -914,37 +1026,37 @@ enum PanicAlertStatus {
 
 // Incident reports
 model IncidentReport {
-  id                String      @id @default(cuid())
-  reporterId        String
-  bookingId         String?
-  guideId           String?
+  id         String  @id @default(cuid())
+  reporterId String
+  bookingId  String?
+  guideId    String?
 
   // Incident details
-  type              IncidentType
-  title             String
-  description       String
-  severity          SafetySeverity @default(CAUTION)
+  type        IncidentType
+  title       String
+  description String
+  severity    SafetySeverity @default(CAUTION)
 
   // Location
-  latitude          Decimal?    @db.Decimal(10, 8)
-  longitude         Decimal?    @db.Decimal(11, 8)
+  latitude            Decimal? @db.Decimal(10, 8)
+  longitude           Decimal? @db.Decimal(11, 8)
   locationDescription String?
 
   // Evidence
-  images            String[]
-  audioRecordings   String[]
+  images          String[]
+  audioRecordings String[]
 
   // Status
-  status            IncidentStatus @default(OPEN)
-  assignedTo        String?
-  resolution        String?
-  resolvedAt        DateTime?
+  status     IncidentStatus @default(OPEN)
+  assignedTo String?
+  resolution String?
+  resolvedAt DateTime?
 
   // Follow-up actions
-  actionsTaken      Json?
+  actionsTaken Json?
 
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([reporterId])
   @@index([guideId])
@@ -973,42 +1085,42 @@ enum IncidentStatus {
 
 // Trusted contacts for panic alerts
 model TrustedContact {
-  id                String    @id @default(cuid())
-  userId            String
+  id     String @id @default(cuid())
+  userId String
 
-  name              String
-  phone             String
-  email             String?
-  relationship      String
+  name         String
+  phone        String
+  email        String?
+  relationship String
 
   // Notification preferences
-  notifyOnPanic     Boolean   @default(true)
-  notifyOnCheckIn   Boolean   @default(false)
+  notifyOnPanic   Boolean @default(true)
+  notifyOnCheckIn Boolean @default(false)
 
-  createdAt         DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }
 
 // Check-in system for solo travelers
 model CheckIn {
-  id                String      @id @default(cuid())
-  userId            String
-  bookingId         String?
+  id        String  @id @default(cuid())
+  userId    String
+  bookingId String?
 
   // Location
-  latitude          Decimal     @db.Decimal(10, 8)
-  longitude         Decimal     @db.Decimal(11, 8)
+  latitude  Decimal @db.Decimal(10, 8)
+  longitude Decimal @db.Decimal(11, 8)
 
   // Check-in details
-  type              CheckInType
-  note              String?
+  type CheckInType
+  note String?
 
   // Auto check-in settings
   expectedNextCheckIn DateTime?
-  alertIfMissed     Boolean     @default(false)
+  alertIfMissed       Boolean   @default(false)
 
-  createdAt         DateTime    @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([bookingId])
@@ -1021,4 +1133,498 @@ enum CheckInType {
   BOOKING_END
   SCHEDULED
   AUTO
+}
+
+// ==================== VERIFICATION DOCUMENTS ====================
+
+model VerificationDocument {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Document details
+  type         DocumentType
+  fileName     String
+  originalName String
+  filePath     String // Local path or S3 key
+  fileSize     Int
+  mimeType     String
+
+  // Status
+  status          DocumentVerificationStatus @default(PENDING)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  adminNotes      String?
+
+  // Document metadata
+  documentNumber String? // ID number, passport number, etc.
+  expiresAt      DateTime? // For ID documents
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+}
+
+enum DocumentType {
+  GOVERNMENT_ID
+  PASSPORT
+  DRIVERS_LICENSE
+  BUSINESS_REGISTRATION
+  PROFESSIONAL_CERTIFICATE
+  CITIZENSHIP
+  PAN_CARD
+  OTHER
+}
+
+enum DocumentVerificationStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+// ==================== SOCIAL MATCHING ====================
+
+model UserMatch {
+  id            String @id @default(cuid())
+  userId        String
+  user          User   @relation("MatchInitiator", fields: [userId], references: [id], onDelete: Cascade)
+  matchedUserId String
+  matchedUser   User   @relation("MatchTarget", fields: [matchedUserId], references: [id], onDelete: Cascade)
+
+  // Compatibility
+  compatibilityScore Float // 0-100
+  matchFactors       Json // { interests: 80, age: 90, location: 70, etc. }
+
+  // Status and actions
+  status              MatchStatus  @default(SUGGESTED)
+  userAction          MatchAction?
+  userActionAt        DateTime?
+  matchedUserAction   MatchAction?
+  matchedUserActionAt DateTime?
+
+  // Connection status
+  connectedAt       DateTime? // When both users liked each other
+  lastInteractionAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, matchedUserId])
+  @@index([userId, status])
+  @@index([matchedUserId, status])
+  @@index([compatibilityScore])
+}
+
+enum MatchStatus {
+  SUGGESTED
+  PENDING // One user has acted
+  MUTUAL_INTEREST // Both liked
+  CONNECTED // Chat initiated
+  BLOCKED
+  EXPIRED
+}
+
+enum MatchAction {
+  LIKE
+  PASS
+  BLOCK
+  SUPER_LIKE
+}
+
+// ==================== SOCIAL ACTIVITIES ====================
+
+model SocialActivity {
+  id        String @id @default(cuid())
+  creatorId String
+  creator   User   @relation("ActivityCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  // Basic info
+  title       String
+  description String
+  type        SocialActivityType
+
+  // Location
+  location     String
+  latitude     Decimal? @db.Decimal(10, 8)
+  longitude    Decimal? @db.Decimal(11, 8)
+  city         String
+  country      String
+  meetingPoint String?
+
+  // Timing
+  startDate      DateTime
+  endDate        DateTime?
+  duration       Int? // Duration in minutes
+  isRecurring    Boolean   @default(false)
+  recurrenceRule String? // iCal RRULE format
+
+  // Capacity
+  minParticipants     Int @default(2)
+  maxParticipants     Int @default(10)
+  currentParticipants Int @default(0)
+
+  // Settings
+  visibility        ActivityVisibility @default(PUBLIC)
+  requiresApproval  Boolean            @default(false)
+  ageRestriction    Int? // Minimum age
+  genderRestriction Gender?
+  verifiedOnly      Boolean            @default(false)
+
+  // Media
+  images     String[]
+  coverImage String?
+
+  // Pricing (optional for paid activities)
+  isFree   Boolean  @default(true)
+  price    Decimal? @db.Decimal(10, 2)
+  currency String   @default("USD")
+
+  // Status
+  status SocialActivityStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  participants ActivityParticipant[]
+  chat         ActivityChat?
+
+  @@index([creatorId])
+  @@index([city, status])
+  @@index([startDate])
+  @@index([type])
+  @@index([status])
+}
+
+enum SocialActivityType {
+  HIKING
+  DINING
+  NIGHTLIFE
+  CULTURAL
+  SPORTS
+  WORKSHOP
+  TRAVEL_BUDDY
+  LANGUAGE_EXCHANGE
+  COFFEE_MEETUP
+  GUIDED_TOUR
+  PARTY
+  FOOD_CRAWL
+  PHOTOGRAPHY
+  OTHER
+}
+
+enum ActivityVisibility {
+  PUBLIC
+  CONNECTIONS_ONLY
+  INVITE_ONLY
+  VERIFIED_ONLY
+}
+
+enum SocialActivityStatus {
+  DRAFT
+  ACTIVE
+  FULL
+  CANCELLED
+  COMPLETED
+}
+
+model ActivityParticipant {
+  id         String         @id @default(cuid())
+  activityId String
+  activity   SocialActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Status
+  status ParticipantStatus @default(PENDING)
+  role   ParticipantRole   @default(PARTICIPANT)
+
+  // Timestamps
+  requestedAt DateTime  @default(now())
+  joinedAt    DateTime?
+  declinedAt  DateTime?
+  cancelledAt DateTime?
+
+  // Notes
+  message       String? // Message with RSVP request
+  declineReason String?
+
+  @@unique([activityId, userId])
+  @@index([userId])
+  @@index([status])
+}
+
+enum ParticipantStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  CANCELLED
+  WAITLIST
+}
+
+enum ParticipantRole {
+  HOST
+  CO_HOST
+  PARTICIPANT
+}
+
+model ActivityChat {
+  id         String         @id @default(cuid())
+  activityId String         @unique
+  activity   SocialActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  // Settings
+  isEnabled        Boolean @default(true)
+  participantsOnly Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  messages ActivityMessage[]
+}
+
+model ActivityMessage {
+  id       String       @id @default(cuid())
+  chatId   String
+  chat     ActivityChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  senderId String
+  sender   User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  content     String
+  type        MessageType @default(TEXT)
+  attachments String[]
+
+  // Moderation
+  isHidden     Boolean @default(false)
+  hiddenBy     String?
+  hiddenReason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([chatId, createdAt])
+  @@index([senderId])
+}
+
+// ==================== ENHANCED CONVERSATIONS ====================
+
+enum ConversationType {
+  PRIVATE // 1:1 messaging between users
+  BOOKING // Booking-related chat (existing)
+  CITY_ROOM // City-based public chat
+  COUNTRY_ROOM // Country-based public chat
+  ACTIVITY // Activity participant chat
+}
+
+// ==================== SUBSCRIPTIONS ====================
+
+model Subscription {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tier   SubscriptionTier   @default(FREE)
+  status SubscriptionStatus @default(ACTIVE)
+
+  // Stripe
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+
+  // Billing
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+
+  // Trial
+  trialStart DateTime?
+  trialEnd   DateTime?
+
+  // Cancellation
+  cancelAtPeriodEnd  Boolean   @default(false)
+  cancelledAt        DateTime?
+  cancellationReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([tier])
+}
+
+enum SubscriptionTier {
+  FREE
+  BASIC // $9.99/month - Chat with matches
+  PREMIUM // $19.99/month - All features
+  BUSINESS // Custom - For guides/businesses
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
+  PAUSED
+}
+
+model ProfileView {
+  id       String @id @default(cuid())
+  viewerId String
+  viewer   User   @relation("ProfileViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  viewedId String
+  viewed   User   @relation("ProfileViewed", fields: [viewedId], references: [id], onDelete: Cascade)
+
+  source String? // "discover", "activity", "search", etc.
+
+  createdAt DateTime @default(now())
+
+  @@index([viewedId, createdAt])
+  @@index([viewerId])
+}
+
+model FeatureAccess {
+  id          String           @id @default(cuid())
+  feature     String           @unique // "chat_matches", "see_profile_views", "priority_matching", etc.
+  minTier     SubscriptionTier
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==================== USER REVIEWS (Social) ====================
+
+model UserReview {
+  id         String @id @default(cuid())
+  reviewerId String
+  reviewer   User   @relation("ReviewerUser", fields: [reviewerId], references: [id], onDelete: Cascade)
+  revieweeId String
+  reviewee   User   @relation("ReviewedUser", fields: [revieweeId], references: [id], onDelete: Cascade)
+
+  // Context
+  activityId String? // If met through an activity
+  matchId    String? // If met through matching
+
+  // Rating
+  rating  Int // 1-5
+  content String?
+
+  // Badges/Tags
+  badges String[] // ["good_communicator", "punctual", "friendly", "knowledgeable"]
+
+  // Status
+  status ReviewStatus @default(PUBLISHED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([reviewerId, revieweeId, activityId])
+  @@index([revieweeId])
+  @@index([rating])
+}
+
+// ==================== MESSAGE MODERATION ====================
+
+model MessageReport {
+  id             String  @id @default(cuid())
+  messageId      String
+  conversationId String?
+  activityChatId String?
+  reporterId     String
+  reporter       User    @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  reason  ReportReason
+  details String?
+
+  // Status
+  status     ReportStatus @default(PENDING)
+  reviewedBy String?
+  reviewedAt DateTime?
+  action     String? // "warned", "message_hidden", "user_banned", etc.
+
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([conversationId])
+  @@index([activityChatId])
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE
+  SCAM
+  HATE_SPEECH
+  VIOLENCE
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  ACTIONED
+  DISMISSED
+}
+
+// ==================== MAP PINS ====================
+
+model MapPin {
+  id String @id @default(cuid())
+
+  type          MapPinType
+  referenceId   String // Experience ID, User ID, Activity ID, etc.
+  referenceType String // "experience", "guide", "user", "business", "activity"
+
+  latitude  Decimal @db.Decimal(10, 8)
+  longitude Decimal @db.Decimal(11, 8)
+
+  title       String
+  description String?
+  image       String?
+
+  // Display options
+  featured Boolean @default(false)
+  priority Int     @default(0)
+
+  // Visibility settings
+  visibleToAll      Boolean @default(true)
+  visibleToMatches  Boolean @default(false)
+  visibleToVerified Boolean @default(false)
+
+  // Active time window
+  activeFrom  DateTime?
+  activeUntil DateTime?
+
+  lastUpdated DateTime @default(now())
+
+  @@index([type])
+  @@index([latitude, longitude])
+  @@index([referenceType, referenceId])
+}
+
+enum MapPinType {
+  EXPERIENCE
+  GUIDE
+  BUSINESS
+  USER_LOCATION
+  ACTIVITY
+  MEETUP_POINT
+}
+
+// ==================== REVIEW HELPFULNESS ====================
+
+model ReviewHelpfulness {
+  id        String  @id @default(cuid())
+  reviewId  String
+  review    Review  @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId    String
+  isHelpful Boolean
+
+  createdAt DateTime @default(now())
+
+  @@unique([reviewId, userId])
 }
