@@ -33,13 +33,10 @@ router.get('/options', (_req, res) => {
  * POST /api/onboarding/step/:step
  * Save data for a specific onboarding step (1-6)
  */
-router.post('/step/:step', (req, res, next) => {
-  const step = parseInt(req.params.step);
+router.post('/step/:step', async (req, res, next) => {
+  const step = parseInt(req.params.step) as 1 | 2 | 3 | 4 | 5 | 6;
   if (step >= 1 && step <= 6 && stepValidations[step]) {
-    return stepValidations[step].reduce(
-      (chain: any, validator: any) => chain.then(() => validator.run(req)),
-      Promise.resolve()
-    ).then(() => next());
+    await Promise.all(stepValidations[step].map(validator => validator.run(req)));
   }
   next();
 }, saveOnboardingStep);
