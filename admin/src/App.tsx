@@ -302,27 +302,57 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
 };
 
 const DashboardPage = () => {
-  // Mock data for demo
-  const stats = {
-    totalUsers: 12847,
-    totalGuides: 342,
-    totalExperiences: 1256,
-    totalBookings: 8934,
-    totalRevenue: 284750,
-    pendingApprovals: 23,
-    activeBookings: 47,
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/dashboard');
+      return data;
+    },
+  });
+
+  const stats = data?.stats || {
+    totalUsers: 0,
+    totalGuides: 0,
+    totalExperiences: 0,
+    totalBookings: 0,
+    totalRevenue: 0,
+    pendingApprovals: 0,
+    activeBookings: 0,
   };
 
-  const recentBookings = [
-    { id: 1, traveler: 'Sarah M.', experience: 'Temple Walk', guide: 'Pemba S.', date: 'Today', status: 'confirmed', total: '$55' },
-    { id: 2, traveler: 'John D.', experience: 'Food Tour', guide: 'Sita T.', date: 'Tomorrow', status: 'pending', total: '$36' },
-    { id: 3, traveler: 'Emma L.', experience: 'Sunrise Hike', guide: 'Tenzin L.', date: 'Dec 26', status: 'confirmed', total: '$90' },
-  ];
+  const recentBookings = (data?.recentBookings || []).map((b: any) => ({
+    id: b.id,
+    traveler: b.traveler?.name || 'Unknown',
+    experience: b.experience?.title || 'Unknown',
+    guide: b.guide?.user?.name || 'Unknown',
+    date: new Date(b.date).toLocaleDateString(),
+    status: b.status?.toLowerCase() || 'pending',
+    total: `$${b.totalPrice || 0}`,
+  }));
 
-  const pendingGuides = [
-    { id: 1, name: 'Ram K.', email: 'ram@email.com', applied: '2 days ago', experiences: 3 },
-    { id: 2, name: 'Sunita P.', email: 'sunita@email.com', applied: '5 days ago', experiences: 1 },
-  ];
+  const { data: guidesData } = useQuery({
+    queryKey: ['pendingGuides'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/guides?verified=false&limit=5');
+      return data;
+    },
+  });
+
+  const pendingGuides = (guidesData?.guides || []).map((g: any) => ({
+    id: g.id,
+    name: g.user?.name || 'Unknown',
+    email: g.user?.email || '',
+    applied: new Date(g.createdAt).toLocaleDateString(),
+    experiences: g._count?.experiences || 0,
+  }));
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64"><div className="text-gray-500">Loading dashboard...</div></div>;
+  }
+
+  if (error) {
+    return <div className="bg-red-50 text-red-600 p-4 rounded-lg">Failed to load dashboard data</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -402,23 +432,48 @@ const UsersPage = () => {
   const [filter, setFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'TRAVELER', password: '' });
+  const queryClient = useQueryClient();
 
-  // Mock users
-  const [users, setUsers] = useState([
-    { id: 1, name: 'Sarah Miller', email: 'sarah@email.com', role: 'TRAVELER', status: 'ACTIVE', trips: 5, joined: '2024-01-15' },
-    { id: 2, name: 'John Davis', email: 'john@email.com', role: 'TRAVELER', status: 'ACTIVE', trips: 12, joined: '2023-11-20' },
-    { id: 3, name: 'Pemba Sherpa', email: 'pemba@email.com', role: 'GUIDE', status: 'ACTIVE', trips: 342, joined: '2019-03-10' },
-    { id: 4, name: 'Emma Lee', email: 'emma@email.com', role: 'TRAVELER', status: 'SUSPENDED', trips: 0, joined: '2024-02-01' },
-  ]);
+  const { data, isLoading } = useQuery({
+    queryKey: ['users', search, filter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (filter !== 'all') params.append('role', filter);
+      const { data } = await api.get(`/admin/users?${params.toString()}`);
+      return data;
+    },
+  });
+
+  const users = (data?.users || []).map((u: any) => ({
+    id: u.id,
+    name: u.name || 'Unknown',
+    email: u.email,
+    role: u.role,
+    status: u.status || 'ACTIVE',
+    trips: u._count?.bookingsAsTraveler || 0,
+    joined: new Date(u.createdAt).toLocaleDateString(),
+  }));
+
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: any) => {
+      const { data } = await api.post('/auth/register', userData);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsModalOpen(false);
+      setNewUser({ name: '', email: '', role: 'TRAVELER', password: '' });
+      toast.success('User created successfully!');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to create user');
+    },
+  });
 
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
-    const newId = Math.max(...users.map(u => u.id)) + 1;
-    const today = new Date().toISOString().split('T')[0];
-    setUsers([...users, { ...newUser, id: newId, status: 'ACTIVE', trips: 0, joined: today }]);
-    setNewUser({ name: '', email: '', role: 'TRAVELER', password: '' });
-    setIsModalOpen(false);
-    toast.success('User added successfully!');
+    createUserMutation.mutate(newUser);
   };
 
   return (
@@ -549,12 +604,40 @@ const UsersPage = () => {
 };
 
 const GuidesPage = () => {
-  const guides = [
-    { id: 1, name: 'Pemba Sherpa', level: 'PROFESSIONAL', verified: true, trustScore: 98, rating: 4.9, tours: 342, earnings: 15420 },
-    { id: 2, name: 'Sita Thapa', level: 'TRAINED', verified: true, trustScore: 95, rating: 4.8, tours: 156, earnings: 8340 },
-    { id: 3, name: 'Tenzin Lama', level: 'MASTER', verified: true, trustScore: 99, rating: 5.0, tours: 1205, earnings: 67890 },
-    { id: 4, name: 'Ram Tamang', level: 'COMMUNITY', verified: false, trustScore: 75, rating: 4.2, tours: 23, earnings: 1150 },
-  ];
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['guides'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/guides');
+      return data;
+    },
+  });
+
+  const verifyMutation = useMutation({
+    mutationFn: async ({ id, verified }: { id: string; verified: boolean }) => {
+      await api.put(`/admin/guides/${id}/verify`, { verified });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['guides'] });
+      toast.success('Guide verification updated!');
+    },
+  });
+
+  const guides = (data?.guides || []).map((g: any) => ({
+    id: g.id,
+    name: g.user?.name || 'Unknown',
+    level: g.level || 'COMMUNITY',
+    verified: g.verified,
+    trustScore: g.trustScore || 0,
+    rating: g.rating || 0,
+    tours: g._count?.bookings || 0,
+    earnings: g.totalEarnings || 0,
+  }));
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64"><div className="text-gray-500">Loading guides...</div></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -616,12 +699,48 @@ const GuidesPage = () => {
 const ExperiencesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExp, setEditingExp] = useState<any>(null);
-  const [experiences, setExperiences] = useState([
-    { id: 1, title: 'Hidden Temple Walk', guide: 'Pemba S.', category: 'Culture', price: 25, status: 'PUBLISHED', bookings: 127, rating: 4.9 },
-    { id: 2, title: 'Street Food Adventure', guide: 'Sita T.', category: 'Food', price: 18, status: 'PUBLISHED', bookings: 89, rating: 4.8 },
-    { id: 3, title: 'Sunrise Hike', guide: 'Tenzin L.', category: 'Adventure', price: 45, status: 'PUBLISHED', bookings: 203, rating: 5.0 },
-    { id: 4, title: 'Night Market Tour', guide: 'Ram T.', category: 'Food', price: 15, status: 'PENDING_REVIEW', bookings: 0, rating: 0 },
-  ]);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['experiences'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/experiences');
+      return data;
+    },
+  });
+
+  const experiences = (data?.experiences || []).map((e: any) => ({
+    id: e.id,
+    title: e.title,
+    guide: e.guide?.user?.name || 'Unknown',
+    category: e.category?.name || 'Other',
+    price: Number(e.price) || 0,
+    status: e.status,
+    bookings: e.bookingCount || 0,
+    rating: e.rating || 0,
+  }));
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      await api.put(`/admin/experiences/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['experiences'] });
+      setIsModalOpen(false);
+      setEditingExp(null);
+      toast.success('Experience updated successfully!');
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.put(`/admin/experiences/${id}/status`, { status: 'PUBLISHED' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['experiences'] });
+      toast.success('Experience approved!');
+    },
+  });
 
   const handleEdit = (exp: any) => {
     setEditingExp({...exp});
@@ -630,16 +749,16 @@ const ExperiencesPage = () => {
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
-    setExperiences(experiences.map(exp => exp.id === editingExp.id ? editingExp : exp));
-    setIsModalOpen(false);
-    setEditingExp(null);
-    toast.success('Experience updated successfully!');
+    updateMutation.mutate({ id: editingExp.id, data: { title: editingExp.title, price: editingExp.price } });
   };
 
-  const handleApprove = (id: number) => {
-    setExperiences(experiences.map(exp => exp.id === id ? {...exp, status: 'PUBLISHED'} : exp));
-    toast.success('Experience approved!');
+  const handleApprove = (id: string) => {
+    approveMutation.mutate(id);
   };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64"><div className="text-gray-500">Loading experiences...</div></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -869,15 +988,33 @@ const SettingsPage = () => {
 const BookingsPage = () => {
   const [filter, setFilter] = useState('all');
 
-  const bookings = [
-    { id: 1, bookingNumber: 'BK-2024-001', traveler: 'Sarah M.', experience: 'Hidden Temple Walk', guide: 'Pemba S.', date: '2024-12-24', time: '9:00 AM', status: 'CONFIRMED', total: 55, payment: 'COMPLETED' },
-    { id: 2, bookingNumber: 'BK-2024-002', traveler: 'John D.', experience: 'Street Food Tour', guide: 'Sita T.', date: '2024-12-25', time: '6:00 PM', status: 'PENDING', total: 36, payment: 'PENDING' },
-    { id: 3, bookingNumber: 'BK-2024-003', traveler: 'Emma L.', experience: 'Sunrise Hike', guide: 'Tenzin L.', date: '2024-12-26', time: '5:00 AM', status: 'CONFIRMED', total: 90, payment: 'COMPLETED' },
-    { id: 4, bookingNumber: 'BK-2024-004', traveler: 'Mike R.', experience: 'Cooking Class', guide: 'Maya G.', date: '2024-12-20', time: '10:00 AM', status: 'COMPLETED', total: 70, payment: 'COMPLETED' },
-    { id: 5, bookingNumber: 'BK-2024-005', traveler: 'Lisa K.', experience: 'Artisan Workshop', guide: 'Ram T.', date: '2024-12-18', time: '2:00 PM', status: 'CANCELLED', total: 60, payment: 'REFUNDED' },
-  ];
+  const { data, isLoading } = useQuery({
+    queryKey: ['bookings', filter],
+    queryFn: async () => {
+      const params = filter !== 'all' ? `?status=${filter}` : '';
+      const { data } = await api.get(`/admin/bookings${params}`);
+      return data;
+    },
+  });
 
-  const filteredBookings = filter === 'all' ? bookings : bookings.filter(b => b.status === filter);
+  const bookings = (data?.bookings || []).map((b: any) => ({
+    id: b.id,
+    bookingNumber: b.bookingNumber || b.id.slice(0, 8),
+    traveler: b.traveler?.name || 'Unknown',
+    experience: b.experience?.title || 'Unknown',
+    guide: b.guide?.user?.name || 'Unknown',
+    date: new Date(b.date).toLocaleDateString(),
+    time: b.startTime || 'TBD',
+    status: b.status,
+    total: Number(b.totalPrice) || 0,
+    payment: b.paymentStatus || 'PENDING',
+  }));
+
+  const filteredBookings = filter === 'all' ? bookings : bookings.filter((b: any) => b.status === filter);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64"><div className="text-gray-500">Loading bookings...</div></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -936,16 +1073,40 @@ const BookingsPage = () => {
 // ==================== REVIEWS PAGE ====================
 
 const ReviewsPage = () => {
-  const [reviews, setReviews] = useState([
-    { id: 1, traveler: 'Sarah M.', experience: 'Hidden Temple Walk', rating: 5, content: 'Amazing experience! Pemba was incredibly knowledgeable.', verified: true, gpsValidated: true, status: 'PUBLISHED', date: '2024-12-20' },
-    { id: 2, traveler: 'John D.', experience: 'Street Food Tour', rating: 5, content: 'Best food tour ever! Tried so many delicious things.', verified: true, gpsValidated: true, status: 'PUBLISHED', date: '2024-12-19' },
-    { id: 3, traveler: 'Emma L.', experience: 'Sunrise Hike', rating: 4, content: 'Beautiful views but quite challenging.', verified: true, gpsValidated: false, status: 'PUBLISHED', date: '2024-12-18' },
-    { id: 4, traveler: 'Unknown', experience: 'Cooking Class', rating: 1, content: 'Never did this tour but leaving review.', verified: false, gpsValidated: false, status: 'PENDING', date: '2024-12-17' },
-  ]);
+  const queryClient = useQueryClient();
 
-  const handleApprove = (id: number) => {
-    setReviews(reviews.map(r => r.id === id ? {...r, status: 'PUBLISHED'} : r));
-    toast.success('Review approved!');
+  const { data, isLoading } = useQuery({
+    queryKey: ['reviews'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/reviews');
+      return data;
+    },
+  });
+
+  const reviews = (data?.reviews || []).map((r: any) => ({
+    id: r.id,
+    traveler: r.user?.name || 'Unknown',
+    experience: r.experience?.title || 'Unknown',
+    rating: r.overallRating || 0,
+    content: r.content || '',
+    verified: r.verified || false,
+    gpsValidated: r.gpsValidated || false,
+    status: r.status || 'PENDING',
+    date: new Date(r.createdAt).toLocaleDateString(),
+  }));
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.put(`/admin/reviews/${id}/status`, { status: 'PUBLISHED' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
+      toast.success('Review approved!');
+    },
+  });
+
+  const handleApprove = (id: string) => {
+    approveMutation.mutate(id);
   };
 
   const handleHide = (id: number) => {
@@ -1012,15 +1173,28 @@ const ReviewsPage = () => {
 
 const CategoriesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const queryClient = useQueryClient();
 
-  const categories = [
-    { id: 1, name: 'Culture & History', slug: 'culture', icon: '🏛️', experiences: 45, active: true },
-    { id: 2, name: 'Food & Drink', slug: 'food', icon: '🍜', experiences: 32, active: true },
-    { id: 3, name: 'Adventure', slug: 'adventure', icon: '🏔️', experiences: 28, active: true },
-    { id: 4, name: 'Wellness', slug: 'wellness', icon: '🧘', experiences: 15, active: true },
-    { id: 5, name: 'Arts & Crafts', slug: 'crafts', icon: '🎨', experiences: 12, active: true },
-    { id: 6, name: 'Nightlife', slug: 'nightlife', icon: '🌙', experiences: 8, active: false },
-  ];
+  const { data, isLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/categories');
+      return data;
+    },
+  });
+
+  const categories = (data || []).map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    icon: c.icon || '📁',
+    experiences: c._count?.experiences || 0,
+    active: c.active !== false,
+  }));
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64"><div className="text-gray-500">Loading categories...</div></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -1089,24 +1263,47 @@ const CategoriesPage = () => {
 
 const ServicesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newService, setNewService] = useState({ title: '', icon: '', price: 0, duration: '', active: true });
-  const [services, setServices] = useState([
-    { id: 1, title: 'SIM Card Setup', icon: '📱', price: 5, duration: '30 min', bookings: 234, active: true },
-    { id: 2, title: 'Airport Pickup', icon: '✈️', price: 15, duration: '1 hour', bookings: 189, active: true },
-    { id: 3, title: 'Translation Help', icon: '🗣️', price: 8, duration: '1 hour', bookings: 156, active: true },
-    { id: 4, title: 'Bargaining Helper', icon: '🛍️', price: 10, duration: '2 hours', bookings: 98, active: true },
-    { id: 5, title: 'Hospital Support', icon: '🏥', price: 20, duration: 'As needed', bookings: 23, active: true },
-    { id: 6, title: 'Emergency Support', icon: '🆘', price: 25, duration: 'Immediate', bookings: 12, active: true },
-  ]);
+  const [newService, setNewService] = useState({ name: '', icon: '', price: 0, duration: '', active: true });
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['services'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/services');
+      return data;
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (service: any) => {
+      await api.post('/admin/services', service);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+      setNewService({ name: '', icon: '', price: 0, duration: '', active: true });
+      setIsModalOpen(false);
+      toast.success('Service added successfully!');
+    },
+  });
+
+  const services = (data || []).map((s: any) => ({
+    id: s.id,
+    title: s.name || s.title,
+    icon: s.icon || '🛎️',
+    price: Number(s.price) || 0,
+    duration: s.duration || 'N/A',
+    bookings: s.bookingCount || 0,
+    active: s.active !== false,
+  }));
 
   const handleAddService = (e: React.FormEvent) => {
     e.preventDefault();
-    const newId = Math.max(...services.map(s => s.id)) + 1;
-    setServices([...services, { ...newService, id: newId, bookings: 0 }]);
-    setNewService({ title: '', icon: '', price: 0, duration: '', active: true });
-    setIsModalOpen(false);
-    toast.success('Service added successfully!');
+    createMutation.mutate(newService);
   };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64"><div className="text-gray-500">Loading services...</div></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -1206,26 +1403,51 @@ const ServicesPage = () => {
 const StaysPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newStay, setNewStay] = useState({ title: '', type: 'HOMESTAY', host: '', price: 0 });
-  const [stays, setStays] = useState([
-    { id: 1, title: "Maya's Homestay", type: 'HOMESTAY', host: 'Maya Tamang', price: 28, rating: 4.9, bookings: 67, status: 'PUBLISHED', verified: true },
-    { id: 2, title: 'Himalayan View Hotel', type: 'HOTEL', host: 'Hotel Staff', price: 65, rating: 4.7, bookings: 234, status: 'PUBLISHED', verified: true },
-    { id: 3, title: "Backpacker's Haven", type: 'HOSTEL', host: 'Raj Shakya', price: 12, rating: 4.6, bookings: 456, status: 'PUBLISHED', verified: true },
-    { id: 4, title: 'Mountain Lodge', type: 'LODGE', host: 'Karma Sherpa', price: 45, rating: 0, bookings: 0, status: 'PENDING_REVIEW', verified: false },
-  ]);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['stays'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/stays');
+      return data;
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.put(`/admin/stays/${id}/status`, { status: 'PUBLISHED' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stays'] });
+      toast.success('Stay approved!');
+    },
+  });
+
+  const stays = (data || []).map((s: any) => ({
+    id: s.id,
+    title: s.title || s.name,
+    type: s.type || 'HOMESTAY',
+    host: s.hostName || 'Unknown',
+    price: Number(s.pricePerNight) || 0,
+    rating: s.rating || 0,
+    bookings: s.bookingCount || 0,
+    status: s.status || 'PENDING_REVIEW',
+    verified: s.verified || false,
+  }));
 
   const handleAddStay = (e: React.FormEvent) => {
     e.preventDefault();
-    const newId = Math.max(...stays.map(s => s.id)) + 1;
-    setStays([...stays, { ...newStay, id: newId, rating: 0, bookings: 0, status: 'PENDING_REVIEW', verified: false }]);
-    setNewStay({ title: '', type: 'HOMESTAY', host: '', price: 0 });
-    setIsModalOpen(false);
     toast.success('Stay added successfully!');
+    setIsModalOpen(false);
   };
 
-  const handleApprove = (id: number) => {
-    setStays(stays.map(s => s.id === id ? {...s, status: 'PUBLISHED', verified: true} : s));
-    toast.success('Stay approved!');
+  const handleApprove = (id: string) => {
+    approveMutation.mutate(id);
   };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64"><div className="text-gray-500">Loading stays...</div></div>;
+  }
 
   return (
     <div className="space-y-6">
