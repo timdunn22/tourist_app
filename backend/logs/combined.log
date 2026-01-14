@@ -63,3 +63,9 @@
 2025-12-24 18:39:29 [info]: ::1 - - [25/Dec/2025:01:39:29 +0000] "POST /api/auth/login HTTP/1.1" 200 915 "http://localhost:3001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.0.0 Safari/537.36"
 2025-12-24 18:42:39 [info]: User logged in: cmjkp88cg0000fbu9baicsczz
 2025-12-24 18:42:39 [info]: ::1 - - [25/Dec/2025:01:42:39 +0000] "POST /api/auth/login HTTP/1.1" 200 915 "http://localhost:3001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/143.0.0.0 Safari/537.36"
+2026-01-13 21:07:49 [info]: 🚀 Server running on port 4000
+2026-01-13 21:07:49 [info]: 📝 API docs available at http://localhost:4000/api/docs
+2026-01-13 21:08:03 [info]: 🚀 Server running on port 4000
+2026-01-13 21:08:03 [info]: 📝 API docs available at http://localhost:4000/api/docs
+2026-01-13 21:10:07 [info]: 🚀 Server running on port 4000
+2026-01-13 21:10:07 [info]: 📝 API docs available at http://localhost:4000/api/docs

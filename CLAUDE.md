@@ -24,9 +24,10 @@ curl https://locallink-api-docker.onrender.com/health
 ```
 
 ### Frontend Apps (Vercel)
-- **Webapp:** https://webapp-taupe-one-46.vercel.app
-- **Admin Panel:** https://admin-flax-five.vercel.app
-- **Mobile Preview:** https://web-kappa-ashy-44.vercel.app
+- **Webapp:** https://webapp-taupe-one-46.vercel.app (prj_evURab0DgrAbGspXk3d8S0TQ6DGt)
+- **Admin Panel:** https://admin-flax-five.vercel.app (prj_Oga1IdRNCGkZncm0IczfpcxmeOzY)
+- **Mobile Preview:** https://web-kappa-ashy-44.vercel.app (prj_qrVU7jyziFP1K289qQXl3lYDoNHC)
+- **Vercel API Token:** EIV88JQfknTQY9GUpSdAVRgY
 - **Deployment Method:** Auto-deploy from Vercel dashboard
 
 ### Legacy Services (Not Active)
