@@ -2,21 +2,27 @@
 
 ## Deployment Information
 
-### Backend (Railway)
-- **URL:** https://api-production-94ee0.up.railway.app
-- **Platform:** Railway
-- **Project ID:** 6fc3a248-022b-415e-aec5-d21b3bb5c08a
-- **Service ID:** 32c73cc9-b17e-4008-b1b4-e9aa17c7f798
-- **Environment ID:** ff0b936e-b80c-42a2-a193-784cd8b936a1
-- **Railway API Token:** 07f565af-9627-416e-b251-74ff9bd1e0e6
+### Backend (Render)
+- **URL:** https://locallink-api.onrender.com
+- **Platform:** Render
+- **Service ID:** srv-d5jg8m6mcj7s738aotlg
+- **Render API Key:** rnd_YL5IuYnCFYYkD1UuJhHjfqsOCSWR
+- **Owner ID:** tea-d5evvmfpm1nc7381l2o0
+- **Dashboard:** https://dashboard.render.com/web/srv-d5jg8m6mcj7s738aotlg
 
 **To trigger deploy:**
 ```bash
-curl -s -X POST "https://backboard.railway.app/graphql/v2" \
-  -H "Authorization: Bearer 07f565af-9627-416e-b251-74ff9bd1e0e6" \
+curl -X POST "https://api.render.com/v1/services/srv-d5jg8m6mcj7s738aotlg/deploys" \
+  -H "Authorization: Bearer rnd_YL5IuYnCFYYkD1UuJhHjfqsOCSWR" \
   -H "Content-Type: application/json" \
-  -d '{"query": "mutation { serviceInstanceRedeploy(serviceId: \"32c73cc9-b17e-4008-b1b4-e9aa17c7f798\", environmentId: \"ff0b936e-b80c-42a2-a193-784cd8b936a1\") }"}'
+  -d '{}'
 ```
+
+### Legacy Backend (Railway) - Currently failing builds
+- **URL:** https://api-production-94ee0.up.railway.app
+- **Service ID:** c1faa9b4-e2b7-4ec9-83d3-72878ef6b278
+- **Environment ID:** ff0b936e-b80c-42a2-a193-784cd8b936a1
+- **Railway API Token:** 07f565af-9627-416e-b251-74ff9bd1e0e6
 
 ### Frontend Apps (Vercel)
 - **Webapp:** https://webapp-taupe-one-46.vercel.app
