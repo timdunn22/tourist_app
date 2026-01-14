@@ -2,27 +2,26 @@
 
 ## Deployment Information
 
-### Backend (Render)
-- **URL:** https://locallink-api.onrender.com
-- **Platform:** Render
-- **Service ID:** srv-d5jg8m6mcj7s738aotlg
+### Backend (Render - Docker)
+- **URL:** https://locallink-api-docker.onrender.com
+- **Platform:** Render (Docker runtime)
+- **Service ID:** srv-d5jhe9hr0fns73d3l8n0
 - **Render API Key:** rnd_YL5IuYnCFYYkD1UuJhHjfqsOCSWR
 - **Owner ID:** tea-d5evvmfpm1nc7381l2o0
-- **Dashboard:** https://dashboard.render.com/web/srv-d5jg8m6mcj7s738aotlg
+- **Dashboard:** https://dashboard.render.com/web/srv-d5jhe9hr0fns73d3l8n0
 
 **To trigger deploy:**
 ```bash
-curl -X POST "https://api.render.com/v1/services/srv-d5jg8m6mcj7s738aotlg/deploys" \
+curl -X POST "https://api.render.com/v1/services/srv-d5jhe9hr0fns73d3l8n0/deploys" \
   -H "Authorization: Bearer rnd_YL5IuYnCFYYkD1UuJhHjfqsOCSWR" \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
 
-### Legacy Backend (Railway) - Currently failing builds
-- **URL:** https://api-production-94ee0.up.railway.app
-- **Service ID:** c1faa9b4-e2b7-4ec9-83d3-72878ef6b278
-- **Environment ID:** ff0b936e-b80c-42a2-a193-784cd8b936a1
-- **Railway API Token:** 07f565af-9627-416e-b251-74ff9bd1e0e6
+**Health check:**
+```bash
+curl https://locallink-api-docker.onrender.com/health
+```
 
 ### Frontend Apps (Vercel)
 - **Webapp:** https://webapp-taupe-one-46.vercel.app
@@ -30,9 +29,9 @@ curl -X POST "https://api.render.com/v1/services/srv-d5jg8m6mcj7s738aotlg/deploy
 - **Mobile Preview:** https://web-kappa-ashy-44.vercel.app
 - **Deployment Method:** Auto-deploy from Vercel dashboard
 
-### Legacy Backend (Render - Not Active)
-- **URL:** https://locallink.onrender.com (OLD - not updated)
-- **Note:** The Render backend is not actively used. Use Railway instead.
+### Legacy Services (Not Active)
+- Railway: https://api-production-94ee0.up.railway.app (failing builds)
+- Old Render Node service: srv-d5jg8m6mcj7s738aotlg (failing builds)
 
 ## Local Development
 
