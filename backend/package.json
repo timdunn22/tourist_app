@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
+    "postinstall": "prisma generate || true",
     "start": "node dist/index.js",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
@@ -58,7 +59,7 @@
     "typescript": "^5.3.3"
   },
   "engines": {
-    "node": ">=18"
+    "node": "20.x"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
