@@ -1,29 +1,46 @@
-# Root Dockerfile for backend API
-FROM node:20-bullseye
+# Root Dockerfile for backend API - Multi-stage build
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Set Prisma to use native binary target
-ENV PRISMA_CLI_QUERY_ENGINE_TYPE="binary"
-ENV PRISMA_CLIENT_ENGINE_TYPE="binary"
+# Install build dependencies
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Copy and install backend dependencies
+# Copy package files
 COPY backend/package*.json ./
+
+# Install all dependencies
 RUN npm ci
 
 # Copy prisma schema and generate client
 COPY backend/prisma ./prisma/
 RUN npx prisma generate
 
-# Copy TypeScript config and source code
+# Copy source and build
 COPY backend/tsconfig.json ./
 COPY backend/src ./src/
-
-# Build TypeScript
 RUN npm run build
 
-# Expose port
+# Production stage
+FROM node:20-slim
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+# Copy package files and install production deps only
+COPY backend/package*.json ./
+RUN npm ci --only=production
+
+# Copy prisma schema and generated client
+COPY backend/prisma ./prisma/
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Copy built code
+COPY --from=builder /app/dist ./dist
+
 EXPOSE 4000
 
-# Start the server from compiled JS
 CMD ["node", "dist/index.js"]
