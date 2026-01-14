@@ -91,6 +91,7 @@ interface AppState {
   services: Service[];
   stays: Stay[];
   bookings: Booking[];
+  savedExperiences: number[];
   activeTab: string;
 
   setUser: (user: User | null) => void;
@@ -98,12 +99,14 @@ interface AppState {
   getExperienceById: (id: number) => Experience | undefined;
   getGuideById: (id: number) => Guide | undefined;
   addBooking: (booking: Omit<Booking, 'id'>) => void;
+  toggleSaved: (experienceId: number) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   activeTab: 'home',
+  savedExperiences: [],
 
   experiences: [
     { id: 1, title: "Hidden Temple Morning Walk", guide: "Pemba Sherpa", guideId: 1, price: 25, duration: "3h", rating: 4.9, reviews: 127, image: "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400", category: "culture", badges: ["GPS-Verified", "Female-Safe", "Platform Trained"], trustScore: 98, description: "Discover ancient temples hidden in Kathmandu's backstreets. Visit sacred sites locals pray at daily.", meetingPoint: "Durbar Square main gate", includes: ["Local guide", "Temple offerings", "Chai tea", "Photo opportunities"], groupSize: "1-6 people", difficulty: "Easy", availability: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] },
@@ -150,5 +153,10 @@ export const useStore = create<AppState>((set, get) => ({
   getGuideById: (id) => get().guides.find(g => g.id === id),
   addBooking: (booking) => set(state => ({
     bookings: [...state.bookings, { ...booking, id: Date.now() }]
+  })),
+  toggleSaved: (experienceId) => set(state => ({
+    savedExperiences: state.savedExperiences.includes(experienceId)
+      ? state.savedExperiences.filter(id => id !== experienceId)
+      : [...state.savedExperiences, experienceId]
   })),
 }));

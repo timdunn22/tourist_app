@@ -437,6 +437,15 @@ const SignupPage = () => {
 
 const HomePage = () => {
   const { experiences, services, user } = useStore();
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/explore?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   return (
     <div className="pb-20">
@@ -448,24 +457,26 @@ const HomePage = () => {
             <h1 className="text-2xl font-bold">{user?.name || 'Traveler'}</h1>
           </div>
           <div className="flex gap-2">
-            <button className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+            <Link to="/notifications" className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
               🔔
-            </button>
-            <button className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+            </Link>
+            <Link to="/safety" className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
               🛡️
-            </button>
+            </Link>
           </div>
         </div>
 
         {/* Search */}
-        <div className="relative">
+        <form onSubmit={handleSearch} className="relative">
           <input
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="What would you like to explore?"
             className="w-full px-4 py-3 pl-12 rounded-xl bg-white text-gray-800 placeholder-gray-400"
           />
-          <span className="absolute left-4 top-1/2 -translate-y-1/2">🔍</span>
-        </div>
+          <button type="submit" className="absolute left-4 top-1/2 -translate-y-1/2">🔍</button>
+        </form>
       </div>
 
       {/* Quick Actions */}
@@ -570,6 +581,8 @@ const HomePage = () => {
 const ExplorePage = () => {
   const { experiences } = useStore();
   const [category, setCategory] = useState('all');
+  const [searchParams] = useState(() => new URLSearchParams(window.location.search));
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
 
   const categories = [
     { id: 'all', label: 'All', icon: '✨' },
@@ -579,14 +592,41 @@ const ExplorePage = () => {
     { id: 'wellness', label: 'Wellness', icon: '🧘' },
   ];
 
-  const filtered = category === 'all'
+  let filtered = category === 'all'
     ? experiences
     : experiences.filter(e => e.category === category);
+
+  if (searchTerm) {
+    const term = searchTerm.toLowerCase();
+    filtered = filtered.filter(e =>
+      e.title.toLowerCase().includes(term) ||
+      e.description?.toLowerCase().includes(term) ||
+      e.guide?.toLowerCase().includes(term)
+    );
+  }
 
   return (
     <div className="pb-20">
       <div className="sticky top-0 bg-white z-40 px-4 py-4 border-b">
         <h1 className="text-xl font-bold mb-4">Explore</h1>
+        <div className="relative mb-3">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search experiences..."
+            className="w-full px-4 py-2 pl-10 rounded-xl bg-gray-100 text-gray-800 placeholder-gray-400"
+          />
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+            >
+              ✕
+            </button>
+          )}
+        </div>
         <div className="flex gap-2 overflow-x-auto pb-2">
           {categories.map(cat => (
             <button
@@ -637,15 +677,24 @@ const ExplorePage = () => {
 
 const ExperienceDetailPage = () => {
   const { id } = useParams();
-  const { getExperienceById, getGuideById, isAuthenticated } = useStore();
+  const { getExperienceById, getGuideById, isAuthenticated, savedExperiences, toggleSaved } = useStore();
   const navigate = useNavigate();
 
   const experience = getExperienceById(Number(id));
   const guide = experience ? getGuideById(experience.guideId) : undefined;
+  const isSaved = savedExperiences.includes(Number(id));
 
   if (!experience) {
     return <div className="p-4">Experience not found</div>;
   }
+
+  const handleToggleSave = () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    toggleSaved(Number(id));
+  };
 
   return (
     <div className="pb-24">
@@ -658,8 +707,11 @@ const ExperienceDetailPage = () => {
         >
           ←
         </button>
-        <button className="absolute top-4 right-4 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center">
-          ♡
+        <button
+          onClick={handleToggleSave}
+          className={`absolute top-4 right-4 w-10 h-10 ${isSaved ? 'bg-red-500 text-white' : 'bg-white/90'} rounded-full flex items-center justify-center`}
+        >
+          {isSaved ? '❤️' : '♡'}
         </button>
       </div>
 
@@ -887,10 +939,20 @@ const GuideDetailPage = () => {
 
 const BookingsPage = () => {
   const { bookings, getExperienceById, getGuideById, isAuthenticated } = useStore();
+  const navigate = useNavigate();
+  const [activeBooking, setActiveBooking] = useState<number | null>(null);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
+
+  const handleStartExperience = (bookingId: number) => {
+    setActiveBooking(bookingId);
+    // Simulate starting the experience
+    setTimeout(() => {
+      alert('Experience started! Your guide has been notified. GPS tracking is now active.');
+    }, 500);
+  };
 
   return (
     <div className="pb-20">
@@ -932,10 +994,20 @@ const BookingsPage = () => {
                 </div>
                 {booking.status === 'upcoming' && (
                   <div className="border-t p-3 flex gap-2">
-                    <button className="flex-1 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium">
-                      Start Experience
+                    <button
+                      onClick={() => handleStartExperience(booking.id)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium ${
+                        activeBooking === booking.id
+                          ? 'bg-green-500 text-white'
+                          : 'bg-orange-500 text-white'
+                      }`}
+                    >
+                      {activeBooking === booking.id ? 'Active Now' : 'Start Experience'}
                     </button>
-                    <button className="flex-1 py-2 border border-gray-200 rounded-lg text-sm">
+                    <button
+                      onClick={() => navigate(`/chat/${guide?.id}`)}
+                      className="flex-1 py-2 border border-gray-200 rounded-lg text-sm"
+                    >
                       Message Guide
                     </button>
                   </div>
@@ -951,10 +1023,17 @@ const BookingsPage = () => {
 
 const MessagesPage = () => {
   const { guides, isAuthenticated } = useStore();
+  const navigate = useNavigate();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
+
+  const mockMessages = [
+    { guideId: 1, lastMessage: "Looking forward to seeing you tomorrow!", time: "2h ago", unread: true },
+    { guideId: 2, lastMessage: "Great! I'll bring extra samples for you.", time: "1d ago", unread: false },
+    { guideId: 3, lastMessage: "See you at 5am at the hotel lobby!", time: "2d ago", unread: false },
+  ];
 
   return (
     <div className="pb-20">
@@ -962,20 +1041,46 @@ const MessagesPage = () => {
         <h1 className="text-xl font-bold">Messages</h1>
       </div>
 
-      <div className="divide-y">
-        {guides.slice(0, 3).map(guide => (
-          <div key={guide.id} className="px-4 py-3 flex items-center gap-3">
-            <img src={guide.avatar} alt={guide.name} className="w-12 h-12 rounded-full object-cover" />
-            <div className="flex-1">
-              <div className="flex justify-between">
-                <p className="font-semibold text-sm">{guide.name}</p>
-                <p className="text-xs text-gray-400">2h ago</p>
-              </div>
-              <p className="text-sm text-gray-500 truncate">Looking forward to seeing you tomorrow!</p>
-            </div>
-          </div>
-        ))}
-      </div>
+      {mockMessages.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-5xl mb-4">💬</div>
+          <h3 className="font-bold text-lg mb-2">No messages yet</h3>
+          <p className="text-gray-500 mb-4">Book an experience to chat with guides!</p>
+          <Link to="/explore" className="text-orange-500 font-medium">Browse Experiences</Link>
+        </div>
+      ) : (
+        <div className="divide-y">
+          {mockMessages.map(msg => {
+            const guide = guides.find(g => g.id === msg.guideId);
+            if (!guide) return null;
+
+            return (
+              <button
+                key={guide.id}
+                onClick={() => navigate(`/chat/${guide.id}`)}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+              >
+                <div className="relative">
+                  <img src={guide.avatar} alt={guide.name} className="w-12 h-12 rounded-full object-cover" />
+                  {msg.unread && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full border-2 border-white"></div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center">
+                    <p className={`font-semibold text-sm ${msg.unread ? 'text-gray-900' : 'text-gray-700'}`}>{guide.name}</p>
+                    <p className="text-xs text-gray-400">{msg.time}</p>
+                  </div>
+                  <p className={`text-sm truncate ${msg.unread ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                    {msg.lastMessage}
+                  </p>
+                </div>
+                <span className="text-gray-400">→</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
@@ -1016,16 +1121,16 @@ const ProfilePage = () => {
       <div className="p-4 space-y-2">
         {[
           { icon: '📅', label: 'My Bookings', path: '/bookings' },
-          { icon: '❤️', label: 'Saved Experiences' },
-          { icon: '💳', label: 'Payment Methods' },
-          { icon: '🔔', label: 'Notifications' },
-          { icon: '🛡️', label: 'Safety Center' },
-          { icon: '❓', label: 'Help & Support' },
-          { icon: '⚙️', label: 'Settings' },
+          { icon: '❤️', label: 'Saved Experiences', path: '/saved' },
+          { icon: '💳', label: 'Payment Methods', path: '/payment' },
+          { icon: '🔔', label: 'Notifications', path: '/notifications' },
+          { icon: '🛡️', label: 'Safety Center', path: '/safety' },
+          { icon: '❓', label: 'Help & Support', path: '/help' },
+          { icon: '⚙️', label: 'Settings', path: '/settings' },
         ].map(item => (
           <Link
             key={item.label}
-            to={item.path || '#'}
+            to={item.path}
             className="flex items-center justify-between p-4 bg-white rounded-xl"
           >
             <div className="flex items-center gap-3">
@@ -1157,6 +1262,437 @@ const BookingPage = () => {
   );
 };
 
+// ==================== ADDITIONAL PAGES ====================
+
+const SavedPage = () => {
+  const { savedExperiences, getExperienceById, isAuthenticated } = useStore();
+  const navigate = useNavigate();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  const savedItems = savedExperiences.map(id => getExperienceById(id)).filter(Boolean);
+
+  return (
+    <div className="pb-20">
+      <div className="sticky top-0 bg-white z-40 px-4 py-4 border-b flex items-center gap-4">
+        <button onClick={() => navigate(-1)} className="text-xl">←</button>
+        <h1 className="text-xl font-bold">Saved Experiences</h1>
+      </div>
+
+      <div className="p-4 space-y-4">
+        {savedItems.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-5xl mb-4">❤️</div>
+            <h3 className="font-bold text-lg mb-2">No saved experiences</h3>
+            <p className="text-gray-500 mb-4">Tap the heart icon to save experiences you love!</p>
+            <Link to="/explore" className="text-orange-500 font-medium">Browse Experiences</Link>
+          </div>
+        ) : (
+          savedItems.map(exp => exp && (
+            <Link key={exp.id} to={`/experience/${exp.id}`}>
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden flex">
+                <img src={exp.image} alt={exp.title} className="w-28 h-28 object-cover" />
+                <div className="flex-1 p-3">
+                  <div className="flex gap-1 mb-1">
+                    {exp.badges.slice(0, 2).map(b => (
+                      <Badge key={b} variant="success">{b}</Badge>
+                    ))}
+                  </div>
+                  <h3 className="font-semibold text-sm mb-1">{exp.title}</h3>
+                  <p className="text-xs text-gray-500 mb-2">{exp.duration} - {exp.difficulty}</p>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1">
+                      <span className="text-yellow-500">★</span>
+                      <span className="text-sm">{exp.rating}</span>
+                    </div>
+                    <span className="font-bold text-orange-500">${exp.price}</span>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+const NotificationsPage = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useStore();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  const notifications = [
+    { id: 1, type: 'booking', title: 'Booking Confirmed', message: 'Your Hidden Temple Walk is confirmed for today at 9:00 AM', time: '2h ago', read: false },
+    { id: 2, type: 'message', title: 'New Message', message: 'Pemba Sherpa sent you a message', time: '5h ago', read: false },
+    { id: 3, type: 'reminder', title: 'Upcoming Experience', message: 'Sunrise Hike to Nagarkot starts in 2 days', time: '1d ago', read: true },
+    { id: 4, type: 'promo', title: 'Special Offer', message: 'Get 15% off your next cooking class!', time: '2d ago', read: true },
+  ];
+
+  return (
+    <div className="pb-20">
+      <div className="sticky top-0 bg-white z-40 px-4 py-4 border-b flex items-center gap-4">
+        <button onClick={() => navigate(-1)} className="text-xl">←</button>
+        <h1 className="text-xl font-bold">Notifications</h1>
+      </div>
+
+      <div className="divide-y">
+        {notifications.map(notif => (
+          <div key={notif.id} className={`px-4 py-4 ${notif.read ? 'bg-white' : 'bg-orange-50'}`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                notif.type === 'booking' ? 'bg-green-100' :
+                notif.type === 'message' ? 'bg-blue-100' :
+                notif.type === 'reminder' ? 'bg-yellow-100' : 'bg-purple-100'
+              }`}>
+                {notif.type === 'booking' ? '✓' :
+                 notif.type === 'message' ? '💬' :
+                 notif.type === 'reminder' ? '⏰' : '🎁'}
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between items-start">
+                  <h3 className={`font-semibold text-sm ${!notif.read ? 'text-gray-900' : 'text-gray-700'}`}>
+                    {notif.title}
+                  </h3>
+                  <span className="text-xs text-gray-400">{notif.time}</span>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">{notif.message}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const SafetyPage = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="pb-20">
+      <div className="sticky top-0 bg-white z-40 px-4 py-4 border-b flex items-center gap-4">
+        <button onClick={() => navigate(-1)} className="text-xl">←</button>
+        <h1 className="text-xl font-bold">Safety Center</h1>
+      </div>
+
+      <div className="p-4 space-y-4">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <h3 className="font-bold text-red-800 flex items-center gap-2">
+            <span>🆘</span> Emergency Support
+          </h3>
+          <p className="text-sm text-red-700 mt-2">24/7 emergency assistance available</p>
+          <button className="mt-3 w-full bg-red-500 text-white py-3 rounded-xl font-semibold">
+            Call Emergency Line
+          </button>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <h3 className="font-bold mb-3">Safety Features</h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <span className="text-2xl">📍</span>
+              <div>
+                <p className="font-medium text-sm">GPS Tracking</p>
+                <p className="text-xs text-gray-500">Share your location with trusted contacts</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <span className="text-2xl">✓</span>
+              <div>
+                <p className="font-medium text-sm">Verified Guides</p>
+                <p className="text-xs text-gray-500">All guides are background-checked</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <span className="text-2xl">🛡️</span>
+              <div>
+                <p className="font-medium text-sm">Trip Insurance</p>
+                <p className="text-xs text-gray-500">Coverage included with every booking</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <h3 className="font-bold mb-3">Emergency Contacts</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center p-2">
+              <span className="text-sm">Police</span>
+              <span className="font-mono text-sm text-orange-500">100</span>
+            </div>
+            <div className="flex justify-between items-center p-2">
+              <span className="text-sm">Ambulance</span>
+              <span className="font-mono text-sm text-orange-500">102</span>
+            </div>
+            <div className="flex justify-between items-center p-2">
+              <span className="text-sm">Tourist Police</span>
+              <span className="font-mono text-sm text-orange-500">1144</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const HelpPage = () => {
+  const navigate = useNavigate();
+
+  const faqs = [
+    { q: 'How do I book an experience?', a: 'Browse experiences, select one you like, choose a date and number of guests, then confirm your booking.' },
+    { q: 'Can I cancel a booking?', a: 'Yes, you can cancel up to 24 hours before the experience for a full refund.' },
+    { q: 'How are guides verified?', a: 'All guides go through background checks, training, and maintain a minimum trust score.' },
+    { q: 'What if I have a problem during the tour?', a: 'Use the emergency button or contact our 24/7 support line.' },
+  ];
+
+  return (
+    <div className="pb-20">
+      <div className="sticky top-0 bg-white z-40 px-4 py-4 border-b flex items-center gap-4">
+        <button onClick={() => navigate(-1)} className="text-xl">←</button>
+        <h1 className="text-xl font-bold">Help & Support</h1>
+      </div>
+
+      <div className="p-4 space-y-4">
+        <div className="bg-orange-50 rounded-xl p-4">
+          <h3 className="font-bold">Need immediate help?</h3>
+          <p className="text-sm text-gray-600 mt-1">Our support team is available 24/7</p>
+          <button className="mt-3 w-full bg-orange-500 text-white py-3 rounded-xl font-semibold">
+            Chat with Support
+          </button>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <h3 className="font-bold mb-3">Frequently Asked Questions</h3>
+          <div className="space-y-3">
+            {faqs.map((faq, i) => (
+              <details key={i} className="group">
+                <summary className="flex justify-between items-center cursor-pointer p-3 bg-gray-50 rounded-lg font-medium text-sm">
+                  {faq.q}
+                  <span className="group-open:rotate-180 transition-transform">↓</span>
+                </summary>
+                <p className="text-sm text-gray-600 p-3">{faq.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <h3 className="font-bold mb-3">Contact Us</h3>
+          <div className="space-y-2">
+            <p className="text-sm flex items-center gap-2">📧 support@locallink.com</p>
+            <p className="text-sm flex items-center gap-2">📞 +977-1-4123456</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SettingsPage = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useStore();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  return (
+    <div className="pb-20">
+      <div className="sticky top-0 bg-white z-40 px-4 py-4 border-b flex items-center gap-4">
+        <button onClick={() => navigate(-1)} className="text-xl">←</button>
+        <h1 className="text-xl font-bold">Settings</h1>
+      </div>
+
+      <div className="p-4 space-y-4">
+        <div className="bg-white rounded-xl shadow-sm">
+          <h3 className="font-bold p-4 border-b">Account</h3>
+          <div className="divide-y">
+            <button className="w-full flex justify-between items-center p-4 text-left">
+              <span>Edit Profile</span>
+              <span className="text-gray-400">→</span>
+            </button>
+            <button className="w-full flex justify-between items-center p-4 text-left">
+              <span>Change Password</span>
+              <span className="text-gray-400">→</span>
+            </button>
+            <button className="w-full flex justify-between items-center p-4 text-left">
+              <span>Email Preferences</span>
+              <span className="text-gray-400">→</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm">
+          <h3 className="font-bold p-4 border-b">Preferences</h3>
+          <div className="divide-y">
+            <div className="flex justify-between items-center p-4">
+              <span>Push Notifications</span>
+              <input type="checkbox" defaultChecked className="w-5 h-5 accent-orange-500" />
+            </div>
+            <div className="flex justify-between items-center p-4">
+              <span>Location Services</span>
+              <input type="checkbox" defaultChecked className="w-5 h-5 accent-orange-500" />
+            </div>
+            <button className="w-full flex justify-between items-center p-4 text-left">
+              <span>Language</span>
+              <span className="text-gray-400">English →</span>
+            </button>
+            <button className="w-full flex justify-between items-center p-4 text-left">
+              <span>Currency</span>
+              <span className="text-gray-400">USD →</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm">
+          <h3 className="font-bold p-4 border-b">Privacy</h3>
+          <div className="divide-y">
+            <button className="w-full flex justify-between items-center p-4 text-left">
+              <span>Privacy Policy</span>
+              <span className="text-gray-400">→</span>
+            </button>
+            <button className="w-full flex justify-between items-center p-4 text-left">
+              <span>Terms of Service</span>
+              <span className="text-gray-400">→</span>
+            </button>
+            <button className="w-full flex justify-between items-center p-4 text-left text-red-500">
+              <span>Delete Account</span>
+              <span>→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PaymentPage = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useStore();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  return (
+    <div className="pb-20">
+      <div className="sticky top-0 bg-white z-40 px-4 py-4 border-b flex items-center gap-4">
+        <button onClick={() => navigate(-1)} className="text-xl">←</button>
+        <h1 className="text-xl font-bold">Payment Methods</h1>
+      </div>
+
+      <div className="p-4 space-y-4">
+        <div className="text-center py-8">
+          <div className="text-5xl mb-4">💳</div>
+          <h3 className="font-bold text-lg mb-2">No payment methods</h3>
+          <p className="text-gray-500 mb-4">Add a card to make booking faster</p>
+          <button className="bg-orange-500 text-white px-6 py-3 rounded-xl font-semibold">
+            Add Payment Method
+          </button>
+        </div>
+
+        <div className="bg-gray-50 rounded-xl p-4">
+          <h4 className="font-medium text-sm text-gray-700 mb-2">Accepted Payment Methods</h4>
+          <div className="flex gap-3">
+            <span className="text-2xl">💳</span>
+            <span className="text-2xl">📱</span>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">Visa, Mastercard, Apple Pay, Google Pay</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ChatPage = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { getGuideById, isAuthenticated } = useStore();
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([
+    { id: 1, from: 'guide', text: 'Hello! I\'m looking forward to our tour tomorrow.', time: '2:30 PM' },
+    { id: 2, from: 'user', text: 'Hi! Me too! What should I bring?', time: '2:32 PM' },
+    { id: 3, from: 'guide', text: 'Just comfortable walking shoes and a water bottle. I\'ll provide everything else!', time: '2:35 PM' },
+    { id: 4, from: 'guide', text: 'Looking forward to seeing you tomorrow!', time: '2:36 PM' },
+  ]);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  const guide = getGuideById(Number(id));
+
+  const handleSend = () => {
+    if (!message.trim()) return;
+    setMessages([...messages, {
+      id: Date.now(),
+      from: 'user',
+      text: message,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }]);
+    setMessage('');
+  };
+
+  return (
+    <div className="h-screen flex flex-col">
+      <div className="bg-white border-b px-4 py-3 flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="text-xl">←</button>
+        {guide && (
+          <>
+            <img src={guide.avatar} alt={guide.name} className="w-10 h-10 rounded-full object-cover" />
+            <div>
+              <p className="font-semibold text-sm">{guide.name}</p>
+              <p className="text-xs text-green-500">Online</p>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+        {messages.map(msg => (
+          <div key={msg.id} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[75%] rounded-2xl px-4 py-2 ${
+              msg.from === 'user'
+                ? 'bg-orange-500 text-white rounded-br-none'
+                : 'bg-white text-gray-800 rounded-bl-none shadow-sm'
+            }`}>
+              <p className="text-sm">{msg.text}</p>
+              <p className={`text-xs mt-1 ${msg.from === 'user' ? 'text-white/70' : 'text-gray-400'}`}>
+                {msg.time}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white border-t p-4 pb-20">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            placeholder="Type a message..."
+            className="flex-1 px-4 py-3 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+          <button
+            onClick={handleSend}
+            className="w-12 h-12 bg-orange-500 text-white rounded-full flex items-center justify-center"
+          >
+            ↑
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ==================== APP ====================
 
 // Declare global types for OAuth SDKs
@@ -1206,6 +1742,13 @@ function App() {
           <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/saved" element={<SavedPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/safety" element={<SafetyPage />} />
+          <Route path="/help" element={<HelpPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/payment" element={<PaymentPage />} />
+          <Route path="/chat/:id" element={<ChatPage />} />
         </Routes>
         <BottomNav />
       </div>
